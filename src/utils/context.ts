@@ -7,15 +7,12 @@ import { getLatexSuiteConfig } from "../snippets/codemirror/config";
 import { syntaxTree } from "@codemirror/language";
 import { SyntaxNode, SyntaxNodeRef } from "@lezer/common";
 import { snippetLessArea, textAreaEnvs } from "./default_text_areas";
+import {
+	isCloseMathNode,
+	isInlineMathOpenNode,
+	isOpenMathNode,
+} from "./math_node_names";
 
-const OPEN_INLINE_MATH_NODE = "formatting_formatting-math_formatting-math-begin_keyword_math";
-const CLOSE_INLINE_MATH_NODE = "formatting_formatting-math_formatting-math-end_keyword_math_math-";
-
-
-const OPEN_DISPLAY_MATH_NODE = "formatting_formatting-math_formatting-math-begin_keyword_math_math-block";
-const CLOSE_DISPLAY_MATH_NODE = "formatting_formatting-math_formatting-math-end_keyword_math_math-";
-export const open_math_nodes = new Set([OPEN_INLINE_MATH_NODE, OPEN_DISPLAY_MATH_NODE]);
-export const close_math_nodes = new Set([CLOSE_INLINE_MATH_NODE, CLOSE_DISPLAY_MATH_NODE]);
 const OPEN_CODEBLOCK_NODE =
 	"HyperMD-codeblock_HyperMD-codeblock-begin_HyperMD-codeblock-begin-bg_HyperMD-codeblock-bg";
 const CLOSE_CODEBLOCK_NODE =
@@ -395,8 +392,8 @@ export const mathBoundsPlugin = ViewPlugin.fromClass(
 					enter: (node: SyntaxNodeRef) => {
 						// Don't include math nodes at the boundaries as in livepreview it means they are not rendered.
 						if (
-							(open_math_nodes.has(node.name) && node.to < to) ||
-							(close_math_nodes.has(node.name) &&
+							(isOpenMathNode(node.name) && node.to < to) ||
+							(isCloseMathNode(node.name) &&
 								node.from > from)
 						) {
 							math_nodes_viewports[i].push(node.node);
@@ -408,13 +405,13 @@ export const mathBoundsPlugin = ViewPlugin.fromClass(
 			for (const math_nodes_viewport of math_nodes_viewports) {
 				// nodes could be unbalanced or unbalanced in the viewport
 				// - e.g., starting with a closing math node or ending with a opening math node
-				if (close_math_nodes.has(math_nodes_viewport[0]?.name)) {
+				if (isCloseMathNode(math_nodes_viewport[0]?.name ?? "")) {
 					const bounds = this.computeEquationBounds(view.state, math_nodes_viewport[0].from);
 					if (bounds) {
 						temp_math_bounds.push(bounds);
 					}
 				}
-				const start_i = open_math_nodes.has(math_nodes_viewport[0]?.name)
+				const start_i = isOpenMathNode(math_nodes_viewport[0]?.name ?? "")
 					? 0
 					: 1;
 				for (let i = start_i; i < math_nodes_viewport.length - 1; i += 2) {
@@ -426,15 +423,15 @@ export const mathBoundsPlugin = ViewPlugin.fromClass(
 						outer_start: open_node.from,
 						outer_end: close_node.to,
 						mode:
-							open_node.name === OPEN_INLINE_MATH_NODE
+							isInlineMathOpenNode(open_node.name)
 								? MathMode.InlineMath
 								: MathMode.BlockMath,
 					});
 				}
 				
 				if (
-					open_math_nodes.has(
-						math_nodes_viewport[math_nodes_viewport.length - 1]?.name,
+					isOpenMathNode(
+						math_nodes_viewport[math_nodes_viewport.length - 1]?.name ?? "",
 					)
 				) {
 					const last_node = math_nodes_viewport[math_nodes_viewport.length - 1];
@@ -522,12 +519,12 @@ export const mathBoundsPlugin = ViewPlugin.fromClass(
 			) {
 				return null;
 			}
-			if (close_math_nodes.has(cursor.name) && pos >= cursor.to) {
+			if (isCloseMathNode(cursor.name) && pos >= cursor.to) {
 				// Cursor is after a closing math node, so no math mode
 				return null;
 			}
 			do {
-				if (open_math_nodes.has(cursor.name)) {
+				if (isOpenMathNode(cursor.name)) {
 					break;
 				}
 			} while (cursor.prev());
@@ -535,7 +532,7 @@ export const mathBoundsPlugin = ViewPlugin.fromClass(
 			if (!begin) return null;
 			cursor.childAfter(pos);
 			do {
-				if (close_math_nodes.has(cursor.name)) {
+				if (isCloseMathNode(cursor.name)) {
 					break;
 				}
 			} while (cursor.next());
@@ -544,7 +541,7 @@ export const mathBoundsPlugin = ViewPlugin.fromClass(
 
 			// Deals with the case of $|$\n text and stuff $$equations and stuff\n$$
 			// where text and stuff is seen as blockmath instead of text
-			if (begin.to > pos && begin.from < pos && begin.name === OPEN_DISPLAY_MATH_NODE ) {
+			if (begin.to > pos && begin.from < pos && !isInlineMathOpenNode(begin.name)) {
 				return {
 					inner_start: pos,
 					inner_end: pos,
@@ -563,7 +560,7 @@ export const mathBoundsPlugin = ViewPlugin.fromClass(
 				outer_start: begin.from,
 				outer_end: end.to,
 				mode:
-					begin.name === OPEN_INLINE_MATH_NODE
+					isInlineMathOpenNode(begin.name)
 						? MathMode.InlineMath
 						: MathMode.BlockMath,
 			};
