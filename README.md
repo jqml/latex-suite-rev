@@ -6,6 +6,35 @@ LaTeX Suite Rev is derived from [Obsidian LaTeX Suite](https://github.com/artist
 
 This distribution recognizes CodeMirror math delimiter nodes semantically when Obsidian inserts Markdown structural components such as list or heading tags into their composite names. That preserves inline-math context and snippet expansion in those structures while retaining the upstream inline-versus-display behavior.
 
+Do not enable LaTeX Suite Rev and the official Obsidian LaTeX Suite plugin simultaneously. Both provide the same commands and editor extensions.
+
+## Installation
+
+Release assets are `main.js`, `manifest.json`, and `styles.css`. Install them in:
+
+```text
+<vault>/.obsidian/plugins/latex-suite-rev
+```
+
+For a controlled migration from the official plugin, create an untracked `vaults.local.json` from `vaults.local.example.json`, then run:
+
+```sh
+npm run build
+node scripts/install-all.mjs --dry-run
+node scripts/install-all.mjs
+```
+
+The installer operates only on explicitly listed absolute vault paths. It backs up the plugin list and relevant plugin assets, retains the official plugin folder for rollback, migrates official `data.json` only on the first Rev installation, preserves existing Rev settings on subsequent installations, disables the official plugin entry, and enables `latex-suite-rev`. It never prints settings contents.
+
+To install one vault explicitly:
+
+```sh
+node scripts/install-to-vault.mjs --vault "/absolute/path/to/vault" --dry-run
+node scripts/install-to-vault.mjs --vault "/absolute/path/to/vault"
+```
+
+Restart Obsidian after installation.
+
 Inspired by [Gilles Castel's setup using UltiSnips](https://castel.dev/post/lecture-notes-1/).
 
 ![demo](https://raw.githubusercontent.com/artisticat1/obsidian-latex-suite/main/gifs/demo.gif)
