@@ -1,55 +1,54 @@
-name: Release Obsidian plugin
-run-name: ${{ github.ref_name }}
+name: Release
 
 on:
   push:
     tags:
-      - "*"
-
-env:
-  PLUGIN_NAME: obsidian-latex-suite # Change this to match the id of your plugin.
+      - "*.*.*"
 
 jobs:
-  build:
+  release:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      id-token: write
+      attestations: write
 
     steps:
       - uses: actions/checkout@v4
-      - name: Use Node.js
-        uses: actions/setup-node@v4
+      - uses: actions/setup-node@v4
         with:
-          node-version: 18
-
-      - name: Build
-        id: build
-        run: |
-          npm install
-          npm run build
-          mkdir ${{ env.PLUGIN_NAME }}
-          cp main.js manifest.json styles.css ${{ env.PLUGIN_NAME }}
-          zip -r ${{ env.PLUGIN_NAME }}.zip ${{ env.PLUGIN_NAME }}
-          ls
-          echo "tag_name=$(git tag --sort version:refname | tail -n 1)" >> $GITHUB_OUTPUT
-
-      - name: Create Release
-        id: create_release
-        uses: actions/create-release@v1
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm test
+      - run: npm run eslint
+      - run: npm run tsc
+      - run: npm run check:json
+      - run: npm run build
+      - run: node --check main.js
+      - name: Verify tag matches manifest
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          VERSION: ${{ github.ref }}
+          TAG_NAME: ${{ github.ref_name }}
+        run: node -e "const manifest=require('./manifest.json'); if (manifest.version !== process.env.TAG_NAME) throw new Error('Tag and manifest version differ')"
+      - name: Attest main.js
+        uses: actions/attest-build-provenance@v2
         with:
-          tag_name: ${{ github.ref }}
-          release_name: ${{ github.ref }}
-          draft: false
-          prerelease: false
-
-      - name: Upload Release Assets
-        uses: softprops/action-gh-release@v1
+          subject-path: main.js
+      - name: Attest manifest.json
+        uses: actions/attest-build-provenance@v2
         with:
+          subject-path: manifest.json
+      - name: Attest styles.css
+        uses: actions/attest-build-provenance@v2
+        with:
+          subject-path: styles.css
+      - name: Publish release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: ${{ github.ref_name }}
+          generate_release_notes: true
+          fail_on_unmatched_files: true
           files: |
-            ./main.js
-            ./manifest.json
-            ./styles.css
-            ./${{ env.PLUGIN_NAME }}.zip
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+            main.js
+            manifest.json
+            styles.css
