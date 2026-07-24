@@ -1,11 +1,10 @@
 {
-	"id": "obsidian-latex-suite",
-	"name": "Latex Suite",
-	"version": "1.11.5",
+	"id": "latex-suite-rev",
+	"name": "LaTeX Suite Rev",
+	"version": "0.1.0",
 	"minAppVersion": "1.0.0",
 	"description": "Make typesetting LaTeX math as fast as handwriting through snippets, text expansion, and editor enhancements",
-	"author": "artisticat",
-	"authorUrl": "https://github.com/artisticat1",
-	"fundingUrl": "https://ko-fi.com/artisticat",
+	"author": "JQML",
+	"authorUrl": "https://github.com/jqml",
 	"isDesktopOnly": false
 }

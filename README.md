@@ -1,6 +1,10 @@
-# Obsidian Latex Suite <img src="https://img.shields.io/github/manifest-json/v/artisticat1/obsidian-latex-suite"> <img src="https://img.shields.io/github/downloads/artisticat1/obsidian-latex-suite/total">
+# LaTeX Suite Rev <img src="https://img.shields.io/github/manifest-json/v/jqml/latex-suite-rev"> <img src="https://img.shields.io/github/downloads/jqml/latex-suite-rev/total">
 
 A plugin for Obsidian that aims to make typesetting LaTeX math as fast as handwriting.
+
+LaTeX Suite Rev is derived from [Obsidian LaTeX Suite](https://github.com/artisticat1/obsidian-latex-suite) by [artisticat1](https://github.com/artisticat1). It retains the upstream MIT license and original copyright notice. JQML maintains this Rev distribution and its compatibility fixes; JQML did not author the original plugin.
+
+This distribution recognizes CodeMirror math delimiter nodes semantically when Obsidian inserts Markdown structural components such as list or heading tags into their composite names. That preserves inline-math context and snippet expansion in those structures while retaining the upstream inline-versus-display behavior.
 
 Inspired by [Gilles Castel's setup using UltiSnips](https://castel.dev/post/lecture-notes-1/).
 
@@ -273,10 +277,10 @@ e.g. "pi" → "\\pi".
 
 
 ## Contributing
-Any contributions and PRs are welcome!
+Contributions and compatibility reports for LaTeX Suite Rev are welcome at [jqml/latex-suite-rev](https://github.com/jqml/latex-suite-rev).
 
 
 ## Support
-If you like this plugin and want to say thanks, you can buy me a coffee here.
+The original project is maintained by artisticat1. If you would like to support the upstream author:
 
 <a href='https://ko-fi.com/J3J6BBZAW' target='_blank'><img height='42' style='border:0px;height:42px;' src='https://cdn.ko-fi.com/cdn/kofi1.png?v=3' border='0' alt='Buy Me a Coffee at ko-fi.com' /></a>

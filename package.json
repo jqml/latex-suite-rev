@@ -1,6 +1,6 @@
 {
-	"name": "obsidian-latex-suite",
-	"version": "1.11.5",
+	"name": "latex-suite-rev",
+	"version": "0.1.0",
 	"description": "Make typesetting LaTeX math as fast as handwriting through snippets, text expansion, and editor enhancements",
 	"main": "main.js",
 	"scripts": {
@@ -12,8 +12,16 @@
 		"eslint": "eslint --fix"
 	},
 	"keywords": [],
-	"author": "",
+	"author": "JQML",
 	"license": "MIT",
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/jqml/latex-suite-rev.git"
+	},
+	"bugs": {
+		"url": "https://github.com/jqml/latex-suite-rev/issues"
+	},
+	"homepage": "https://github.com/jqml/latex-suite-rev#readme",
 	"devDependencies": {
 		"@codemirror/autocomplete": "^6.0.0",
 		"@codemirror/commands": "^6.0.0",
