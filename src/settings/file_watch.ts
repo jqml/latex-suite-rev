@@ -1,9 +1,10 @@
 import LatexSuitePlugin from "../main";
-import { Vault, TFile, TFolder, TAbstractFile, Notice, debounce } from "obsidian";
+import { Vault, TFile, TFolder, TAbstractFile, Notice, debounce, normalizePath } from "obsidian";
 import { Snippet } from "../snippets/snippets";
 import { parseSnippets, parseSnippetVariables, type SnippetVariables } from "../snippets/parse";
 import { sortSnippets } from "src/snippets/sort";
 import { difference, intersection } from "src/utils/prototype_utils";
+import { pathIsWithin } from "src/utils/vault_path";
 
 function isInFolder(file: TFile, dir: TFolder) {
 	let cur = file.parent;
@@ -21,7 +22,7 @@ function isInFolder(file: TFile, dir: TFolder) {
 }
 
 function fileIsInFolder(plugin: LatexSuitePlugin, folderPath: string, file: TFile) {
-	const snippetDir = plugin.app.vault.getAbstractFileByPath(folderPath);
+	const snippetDir = plugin.app.vault.getAbstractFileByPath(normalizePath(folderPath));
 	const isFolder = snippetDir instanceof TFolder;
 
 	return (isFolder && isInFolder(file, snippetDir));
@@ -61,11 +62,15 @@ export const onFileCreate = (plugin: LatexSuitePlugin, file: TAbstractFile) => {
 export const onFileDelete = (plugin: LatexSuitePlugin, file: TAbstractFile) => {
 	if (!(file instanceof TFile)) return;
 
-	const snippetVariablesDir = plugin.app.vault.getAbstractFileByPath(plugin.settings.snippetVariablesFileLocation);
-	const snippetDir = plugin.app.vault.getAbstractFileByPath(plugin.settings.snippetsFileLocation);
+	const snippetVariablesDir = plugin.app.vault.getAbstractFileByPath(
+		normalizePath(plugin.settings.snippetVariablesFileLocation),
+	);
+	const snippetDir = plugin.app.vault.getAbstractFileByPath(
+		normalizePath(plugin.settings.snippetsFileLocation),
+	);
 
-	if (plugin.settings.loadSnippetVariablesFromFile && snippetVariablesDir instanceof TFolder && file.path.contains(snippetVariablesDir.path)
-		|| plugin.settings.loadSnippetsFromFile && snippetDir instanceof TFolder && file.path.contains(snippetDir.path)
+	if (plugin.settings.loadSnippetVariablesFromFile && snippetVariablesDir instanceof TFolder && pathIsWithin(file.path, snippetVariablesDir.path)
+		|| plugin.settings.loadSnippetsFromFile && snippetDir instanceof TFolder && pathIsWithin(file.path, snippetDir.path)
 	) {
 		refreshFromFiles(plugin);
 	}
@@ -81,7 +86,7 @@ function* generateFilesWithin(fileOrFolder: TAbstractFile): Generator<TFile> {
 }
 
 function getFilesWithin(vault: Vault, path: string): Set<TFile> {
-	const fileOrFolder = vault.getAbstractFileByPath(path);
+	const fileOrFolder = vault.getAbstractFileByPath(normalizePath(path));
 	if (!fileOrFolder) {
 		console.warn(`Could not find file or folder at path ${path}`);
 		return new Set<TFile>();

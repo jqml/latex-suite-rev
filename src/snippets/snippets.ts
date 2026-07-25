@@ -1,6 +1,8 @@
 import { SelectionRange } from "@codemirror/state";
 import { Options } from "./options";
 import { Environment } from "./environment";
+import { expandRegexReplacement } from "./regex_replacement";
+import { applyVisualSelection } from "./visual_replacement";
 
 /**
  * in visual snippets, if the replacement is a string, this is the magic substring to indicate the selection.
@@ -114,7 +116,11 @@ export class VisualSnippet extends Snippet<"visual"> {
 		const triggerPos = range.from;
 		let replacement;
 		if (typeof this.replacement === "string") {
-			replacement = this.replacement.replace(VISUAL_SNIPPET_MAGIC_SELECTION_PLACEHOLDER, sel);
+			replacement = applyVisualSelection(
+				this.replacement,
+				VISUAL_SNIPPET_MAGIC_SELECTION_PLACEHOLDER,
+				sel,
+			);
 		} else {
 			replacement = this.replacement(sel);
 
@@ -145,16 +151,7 @@ export class RegexSnippet extends Snippet<"regex"> {
 
 		let replacement;
 		if (typeof this.replacement === "string") {
-			// Compute the replacement string
-			// result.length - 1 = the number of capturing groups
-
-			const nCaptureGroups = result.length - 1;
-			replacement = Array.from({ length: nCaptureGroups })
-				.map((_, i) => i + 1)
-				.reduce(
-					(replacement, i) => replacement.replaceAll(`[[${i - 1}]]`, result[i]),
-					this.replacement
-				);
+			replacement = expandRegexReplacement(this.replacement, result);
 		} else {
 			replacement = this.replacement(result);
 

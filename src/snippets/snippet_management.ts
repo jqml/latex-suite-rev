@@ -108,8 +108,7 @@ function expandTabstops(
 	const color = getNextTabstopColor(view);
 	const tabstopGroups = tabstopSpecsToTabstopGroups(tabstops, color);
 	tabstopGroups.forEach((grp) => grp.map(changes));
-	const extraTabstopGroups = tabstopSpecsToTabstopGroups(tabstops, color)
-	extraTabstopGroups.forEach((grp) => grp.map(changes));
+	const frozenTabstopGroups = tabstopGroups.map((group) => group.copy());
 	// Insert the replacements
 	const effects = addTabstops(tabstopGroups).effects;
 	const firstGrp = tabstopGroups[0];
@@ -120,7 +119,7 @@ function expandTabstops(
 		sequential: true
 	};
 	view.dispatch({
-		effects: [...effects, startSnippet.of(extraTabstopGroups)],
+		effects: [...effects, startSnippet.of(frozenTabstopGroups)],
 		changes: undoChanges.changes.compose(changes),
 		selection: undoChanges.selection
 	}, spec);

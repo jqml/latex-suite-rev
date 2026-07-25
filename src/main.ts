@@ -15,21 +15,20 @@ import { concealPlugin } from "./editor_extensions/conceal";
 import { colorPairedBracketsPluginLowestPrec, highlightCursorBracketsPlugin } from "./editor_extensions/highlight_brackets";
 import { cursorTooltipBaseTheme, cursorTooltipField } from "./editor_extensions/math_tooltip";
 import { contextPlugin, mathBoundsPlugin } from "./utils/context";
-import { Vim } from "./utils/vim_types";
+import { getVimAdapter } from "./utils/vim";
 
 export default class LatexSuitePlugin extends Plugin {
 	settings: LatexSuitePluginSettings;
 	CMSettings: LatexSuiteCMSettings;
 	editorExtensions: Extension[] = [];
+	private mathJaxLoad: Promise<void> | null = null;
 
 	async onload() {
 		await this.loadSettings();
 
 		this.loadIcons();
 		this.addSettingTab(new LatexSuiteSettingTab(this.app, this));
-		loadMathJax();
 
-		this.legacyEditorWarning();
 		this.IMEEditorWarning();
 
 		// Register Latex Suite extensions and optional editor extensions for editor enhancements
@@ -41,17 +40,11 @@ export default class LatexSuitePlugin extends Plugin {
 		this.addEditorCommands();
 	}
 
-	onunload() {}
-
-	legacyEditorWarning() {
-		// @ts-ignore
-		if (this.app.vault.config?.legacyEditor) {
-			const message = "Latex Suite: This plugin does not support the legacy editor. Switch to Live Preview mode to use this plugin.";
-
-			new Notice(message, 100000);
-			console.error(message);
-
-			return;
+	onunload() {
+		const vimObject = getVimAdapter();
+		if (!vimObject || !this.settings?.vimEnabled) return;
+		for (const command of getVimEditorCommands(this.settings)) {
+			vimObject.unmap(command.key, command.context);
 		}
 	}
 
@@ -64,7 +57,6 @@ export default class LatexSuitePlugin extends Plugin {
 			message.createEl("code", { text: "Advanced settings > Suppress IME warning" });
 			message.appendText(".");
 			new Notice(message, 10000);
-			console.info(message);
 		}
 	}
 
@@ -90,7 +82,7 @@ export default class LatexSuitePlugin extends Plugin {
 		this.settings = Object.assign({}, DEFAULT_SETTINGS, data);
 
 		if (shouldMigrateSettings) {
-			this.saveSettings();
+			await this.saveData(this.settings);
 		}
 
 		if (this.settings.loadSnippetsFromFile || this.settings.loadSnippetVariablesFromFile) {
@@ -101,7 +93,7 @@ export default class LatexSuitePlugin extends Plugin {
 
 			// Use onLayoutReady so that we don't try to read the snippets file too early
 			this.app.workspace.onLayoutReady(() => {
-				this.processSettings();
+				void this.processSettings();
 			});
 		}
 		else {
@@ -111,7 +103,7 @@ export default class LatexSuitePlugin extends Plugin {
 
 	async saveSettings(didFileLocationChange = false) {
 		await this.saveData(this.settings);
-		this.processSettings(didFileLocationChange);
+		await this.processSettings(didFileLocationChange);
 	}
 
 	async getSettingsSnippetVariables() {
@@ -163,6 +155,13 @@ export default class LatexSuitePlugin extends Plugin {
 
 	async processSettings(becauseFileLocationUpdated = false, becauseFileUpdated = false) {
 		this.CMSettings = processLatexSuiteSettings(await this.getSnippets(becauseFileLocationUpdated, becauseFileUpdated), this.settings);
+		if (this.CMSettings.mathPreviewEnabled) {
+			this.mathJaxLoad ??= loadMathJax();
+			void this.mathJaxLoad.catch((error) => {
+				console.error("LaTeX Suite Rev could not load MathJax:", error);
+				this.mathJaxLoad = null;
+			});
+		}
 		this.setEditorExtensions();
 		// Request Obsidian to reconfigure CM extensions
 		this.app.workspace.updateOptions();
@@ -173,7 +172,7 @@ export default class LatexSuitePlugin extends Plugin {
 		// Remove all currently loaded CM extensions
 		// In order for 'this.app.workspace.updateOptions()' to function as
 		// expected, you cannot assign a new array to 'this.editorExtensions'.
-		while (this.editorExtensions.length) this.editorExtensions.pop();
+		this.editorExtensions.length = 0;
 
 		// Compulsory extensions
 		this.editorExtensions.push([
@@ -226,12 +225,8 @@ export default class LatexSuitePlugin extends Plugin {
 			this.addCommand(command);
 		}
 		vimcommand:  {
-			//check if vim is enabled and accessible
-			//@ts-ignore
-			if (!app?.isVimEnabled()) break vimcommand;
 			if (!this.settings.vimEnabled) break vimcommand;
-			//@ts-ignore undocumented object
-			const vimObject: Vim | null = window?.CodeMirrorAdapter?.Vim;
+			const vimObject = getVimAdapter();
 			if (!vimObject) break vimcommand;
 			for (const command of getVimEditorCommands(this.settings)) {
 				vimObject[command.defineType](command.id, command.action);

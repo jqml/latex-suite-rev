@@ -12,6 +12,7 @@ import {
 	isInlineMathOpenNode,
 	isOpenMathNode,
 } from "./math_node_names";
+import { findNestedInlineMathBounds } from "./inner_math_bounds";
 
 const OPEN_CODEBLOCK_NODE =
 	"HyperMD-codeblock_HyperMD-codeblock-begin_HyperMD-codeblock-begin-bg_HyperMD-codeblock-bg";
@@ -66,12 +67,15 @@ export const contextPlugin = ViewPlugin.fromClass(
 		this.state = state;
 		this.pos = sel.main.to;
 		this.ranges = Array.from(sel.ranges).reverse(); // Last to first
-		this.mode = new Mode();
 		this.boundsCache = new Map();
 		this.innerBoundsCache = new Map();
-		this.codeblockLanguage = null;
+		this.mode = this.getModeAt(this.pos);
+	}
 
-		const codeBlockInfo = langIfWithinCodeblock(state);
+	getModeAt(pos: number): Mode {
+		const mode = new Mode();
+		const state = this.state;
+		const codeBlockInfo = langIfWithinCodeblock(state, pos);
 		const codeblockLanguage = codeBlockInfo?.codeblockLanguage ?? null;
 		const inCode = codeblockLanguage !== null;
 
@@ -79,43 +83,49 @@ export const contextPlugin = ViewPlugin.fromClass(
 		const forceMath =
 			inCode &&
 			settings.forceMathLanguages.contains(codeblockLanguage);
-		this.mode.codeMath = forceMath;
-		this.mode.code = inCode && !forceMath ? codeblockLanguage : false;
-		if (inCode && this.mode.code !== false) {
+		mode.codeMath = forceMath;
+		mode.code = inCode && !forceMath ? codeblockLanguage : false;
+		if (pos === this.pos) {
 			this.codeblockLanguage = codeblockLanguage;
-			this.boundsCache.set(this.pos, codeBlockInfo);
+		}
+		if (inCode && mode.code !== false && codeBlockInfo) {
+			this.boundsCache.set(pos, codeBlockInfo);
 		}
 
 		// first, check if math mode should be "generally" on
-		const mathBoundsCache = getMathBoundsPlugin(view);
-		const inMath = forceMath || mathBoundsCache.inMathBound(state, this.pos);
+		const mathBoundsCache = getMathBoundsPlugin(this.view);
+		const inMath = forceMath || mathBoundsCache.inMathBound(state, pos);
 		
 		if (inMath !== true && inMath !== null) {
 			const inInlineEquation = inMath.mode === MathMode.InlineMath;
-			this.mode.blockMath = !inInlineEquation;
-			this.mode.inlineMath = inInlineEquation;
-			this.boundsCache.set(this.pos, inMath);
+			mode.blockMath = !inInlineEquation;
+			mode.inlineMath = inInlineEquation;
+			this.boundsCache.set(pos, inMath);
 		}
 
 		if (inMath) {
-			const textEnv = this.inTextEnvironment();
+			const textEnv = this.inTextEnvironment(pos, mode);
 			if (textEnv === "text") {
-				this.mode.textEnv = true;
+				mode.textEnv = true;
 			} else if (textEnv === "none") {
-				this.mode.inlineMath = false;
-				this.mode.blockMath = false;
-				this.mode.codeMath = false;
+				mode.inlineMath = false;
+				mode.blockMath = false;
+				mode.codeMath = false;
 			}
 		}
 
-		this.mode.text = !inCode && !inMath;
-
+		mode.text = !inCode && !inMath;
+		return mode;
 	}
 
-	isWithinEnvironment<T extends Environment>(pos: number, envs: T | T[]): T & Bounds | null {
-		if (!this.mode.inMath()) return null;
+	isWithinEnvironment<T extends Environment>(
+		pos: number,
+		envs: T | T[],
+		mode: Mode = this.mode,
+	): T & Bounds | null {
+		if (!mode.inMath()) return null;
 
-		const bounds = this.getInnerBounds();
+		const bounds = this.getInnerBounds(pos, mode);
 		if (!bounds) return null;
 
 		const {inner_start: start, inner_end: end} = bounds;
@@ -182,8 +192,11 @@ export const contextPlugin = ViewPlugin.fromClass(
 		return null;
 	}
 
-	inTextEnvironment(): "text" | "none" | null {
-		const result = this.isWithinEnvironment(this.pos, textAreaEnvs)
+	inTextEnvironment(
+		pos: number = this.pos,
+		mode: Mode = this.mode,
+	): "text" | "none" | null {
+		const result = this.isWithinEnvironment(pos, textAreaEnvs, mode)
 		if (!result) return null;
 		const openSymbol = result.openSymbol.slice(1, -1);
 		if (snippetLessArea.includes(openSymbol as (typeof snippetLessArea)[number])) {
@@ -193,7 +206,7 @@ export const contextPlugin = ViewPlugin.fromClass(
 		}
 	}
 
-	getBounds(pos: number = this.pos): Bounds | null {
+	getBounds(pos: number = this.pos, mode: Mode = this.mode): Bounds | null {
 		// yes, I also want the cache to work over the produced range instead of just that one through
 		// a BTree or the like, but that'd be probably overkill
 		const cached = this.boundsCache.get(pos);
@@ -202,7 +215,7 @@ export const contextPlugin = ViewPlugin.fromClass(
 		}
 
 		let bounds: Bounds | null;
-		if (this.mode.codeMath) {
+		if (mode.codeMath) {
 			// means a codeblock language triggered the math mode -> use the codeblock bounds instead
 			bounds = getCodeblockBounds(this.state, pos);
 		} else {
@@ -214,17 +227,17 @@ export const contextPlugin = ViewPlugin.fromClass(
 	}
 
 	// Accounts for equations within text environments, e.g. $$\text{... $...$}$$
-	getInnerBounds(pos: number = this.pos): Bounds | null {
+	getInnerBounds(pos: number = this.pos, mode: Mode = this.mode): Bounds | null {
 		let bounds: Bounds | null;
 		const cached = this.innerBoundsCache.get(pos);
 		if (cached !== undefined) {
 			return cached;
 		}
-		if (this.mode.codeMath) {
+		if (mode.codeMath) {
 			// means a codeblock language triggered the math mode -> use the codeblock bounds instead
 			bounds = this.getBounds(pos);
 		} else {
-			bounds = getInnerEquationBounds(this.view);
+			bounds = getInnerEquationBounds(this.view, pos);
 		}
 		this.innerBoundsCache.set(pos, bounds);
 
@@ -250,25 +263,11 @@ enum MathMode {
 
 // Accounts for equations within text environments, e.g. $$\text{... $...$}$$
 const getInnerEquationBounds = (view: EditorView, pos?: number ):Bounds | null => {
-	if (!pos) pos = view.state.selection.main.to;
+	if (pos === undefined) pos = view.state.selection.main.to;
 	const bounds = getMathBoundsPlugin(view).inMathBound(view.state, pos);
 	if (!bounds) return null;
-	let text = view.state.sliceDoc(bounds.inner_start, bounds.inner_end);
-
-	// ignore \$
-	text = text.replaceAll("\\$", "\\R");
-
-	const left = text.lastIndexOf("$", pos-1);
-	const right = text.indexOf("$", pos);
-
-	if (left === -1 || right === -1) return bounds;
-
-	return {
-		inner_start: left + 1,
-		inner_end: right,
-		outer_start: left,
-		outer_end: right + 1,
-	};
+	const text = view.state.sliceDoc(bounds.inner_start, bounds.inner_end);
+	return findNestedInlineMathBounds(text, bounds, pos);
 }
 
 /**
@@ -334,9 +333,9 @@ const getCodeblockBoundNodes = (
 
 type CodeblockLangInfo = Bounds & { codeblockLanguage: string };
 const langIfWithinCodeblock = (
-	state: EditorState
+	state: EditorState,
+	pos: number = state.selection.ranges[0].from,
 ): CodeblockLangInfo | null => {
-	const pos = state.selection.ranges[0].from;
 	const coddeblockBounds = getCodeblockBoundNodes(state, pos);
 	if (!coddeblockBounds) return null;
 	const { begin: codeblockBegin, end: codeblockEnd } = coddeblockBounds
@@ -481,7 +480,7 @@ export const mathBoundsPlugin = ViewPlugin.fromClass(
 		};
 		
 		getEquationBounds(state: EditorState, pos?: number ):MathBounds | null {
-			if (!pos) pos = state.selection.main.to;
+			if (pos === undefined) pos = state.selection.main.to;
 			const bounds = this.computeEquationBounds(state, pos);
 			if (!bounds) return null;
 			this.addMathBound(bounds);

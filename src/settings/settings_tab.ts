@@ -1,6 +1,6 @@
 import { EditorState, Extension } from "@codemirror/state";
 import { EditorView, ViewUpdate } from "@codemirror/view";
-import { App, ButtonComponent, ExtraButtonComponent, Modal, Platform, PluginSettingTab, Setting, debounce, setIcon } from "obsidian";
+import { App, ButtonComponent, ExtraButtonComponent, Modal, Notice, Platform, PluginSettingTab, Setting, debounce, setIcon } from "obsidian";
 import { parseKeyName, parseSnippetVariables, parseSnippets } from "src/snippets/parse";
 import { DEFAULT_SNIPPETS } from "src/utils/default_snippets";
 import LatexSuitePlugin from "../main";
@@ -8,7 +8,7 @@ import { DEFAULT_SETTINGS, LatexSuiteCMKeymapSettings } from "./settings";
 import { FileSuggest } from "./ui/file_suggest";
 import { basicSetup } from "./ui/snippets_editor/extensions";
 import { getVimSelectModeCommand, vimCommand, getVimVisualModeCommand, getVimEditorCommands, getVimRunMatrixEnterCommand } from "src/features/editor_commands";
-import { Vim } from "src/utils/vim_types";
+import { getVimAdapter } from "src/utils/vim";
 
 
 export class LatexSuiteSettingTab extends PluginSettingTab {
@@ -40,6 +40,7 @@ export class LatexSuiteSettingTab extends PluginSettingTab {
 	display(): void {
 		const { containerEl } = this;
 		containerEl.empty();
+		containerEl.addClass("latex-suite-settings");
 
 		this.displaySnippetSettings();
 		this.displayConcealSettings();
@@ -94,8 +95,9 @@ export class LatexSuiteSettingTab extends PluginSettingTab {
 
 		const snippetsFileLocDesc = new DocumentFragment();
 		snippetsFileLocDesc.createDiv({}, div => {
-			div.innerHTML = `
-			The file or folder to load snippets from. The file or folder must be within your vault, and not within a hidden folder (such as <code>.obsidian/</code>).`;
+			div.appendText("The file or folder to load snippets from. The file or folder must be within your vault, and not within a hidden folder (such as ");
+			div.createEl("code", { text: `${this.app.vault.configDir}/` });
+			div.appendText(").");
 		});
 
 		const snippetsFileLoc = new Setting(containerEl)
@@ -137,9 +139,13 @@ export class LatexSuiteSettingTab extends PluginSettingTab {
 
 		const fragment = new DocumentFragment();
 		fragment.createDiv({}, div => div.setText("Make equations more readable by hiding LaTeX syntax and instead displaying it in a pretty format."));
-		fragment.createDiv({}, div => div.innerHTML = `
-			e.g. <code>\\dot{x}^{2} + \\dot{y}^{2}</code> will display as ẋ² + ẏ², and <code>\\sqrt{ 1-\\beta^{2} }</code> will display as √{ 1-β² }.
-		`);
+		fragment.createDiv({}, div => {
+			div.appendText("For example, ");
+			div.createEl("code", { text: "\\dot{x}^{2} + \\dot{y}^{2}" });
+			div.appendText(" displays as ẋ² + ẏ², and ");
+			div.createEl("code", { text: "\\sqrt{ 1-\\beta^{2} }" });
+			div.appendText(" displays as √{ 1-β² }.");
+		});
 		fragment.createDiv({}, div => div.setText("LaTeX beneath the cursor will be revealed."));
 		fragment.createEl("br");
 		fragment.createDiv({}, div => div.setText("Disabled by default to not confuse new users. However, I recommend turning this on once you are comfortable with the plugin!"));
@@ -173,7 +179,7 @@ export class LatexSuiteSettingTab extends PluginSettingTab {
 					const ok = /^\d+$/.test(value);
 					if (ok) {
 						this.plugin.settings.concealRevealTimeout = Number(value);
-						this.plugin.saveSettings();
+						void this.plugin.saveSettings();
 					}
 				})
 			);
@@ -208,11 +214,11 @@ export class LatexSuiteSettingTab extends PluginSettingTab {
 		const containerEl = this.containerEl;
 		this.addHeading(containerEl, "Math popup preview", "superscript");
 
-		const popup_fragment = document.createDocumentFragment();
-		const popup_line1 = document.createElement("div");
+		const popup_fragment = createFragment();
+		const popup_line1 = createDiv();
 		popup_line1.setText("When inside an equation, show a popup preview window of the rendered math.");
-		const popup_space = document.createElement("br");
-		const popup_line2 = document.createElement("div");
+		const popup_space = createEl("br");
+		const popup_line2 = createDiv();
 		popup_line2.setText("The popup preview will be shown for all inline math equations, as well as for block math equations in Source mode.");
 		popup_fragment.append(popup_line1, popup_space, popup_line2);
 
@@ -459,8 +465,9 @@ export class LatexSuiteSettingTab extends PluginSettingTab {
 
 		const snippetVariablesFileLocDesc = new DocumentFragment();
 		snippetVariablesFileLocDesc.createDiv({}, (div) => {
-			div.innerHTML = `
-			The file or folder to load snippet variables from. The file or folder must be within your vault, and not within a hidden folder (such as <code>.obsidian/</code>).`;
+			div.appendText("The file or folder to load snippet variables from. The file or folder must be within your vault, and not within a hidden folder (such as ");
+			div.createEl("code", { text: `${this.app.vault.configDir}/` });
+			div.appendText(").");
 		});
 
 		const snippetVariablesFileLoc = new Setting(containerEl)
@@ -590,8 +597,7 @@ export class LatexSuiteSettingTab extends PluginSettingTab {
 					const oldValue: string = this.plugin.settings.vimSelectMode;
 				this.plugin.settings.vimSelectMode = value;
 				await this.plugin.saveSettings();	
-				//@ts-ignore undocumented object
-				const vimObject: Vim | null = window?.CodeMirrorAdapter?.Vim;
+				const vimObject = getVimAdapter();
 				if (!vimObject) return;
 				const command: vimCommand = getVimSelectModeCommand(this.plugin.settings);
 				vimObject[command.defineType](command.id, command.action);
@@ -615,8 +621,7 @@ export class LatexSuiteSettingTab extends PluginSettingTab {
 					this.plugin.settings.vimVisualMode = value;
 					await this.plugin.saveSettings();	
 					const command: vimCommand = getVimVisualModeCommand(this.plugin.settings);
-					//@ts-ignore undocumented object
-					const vimObject: Vim | null = window?.CodeMirrorAdapter?.Vim;
+					const vimObject = getVimAdapter();
 					if (!vimObject) return;
 					vimObject[command.defineType](command.id, command.action);
 					vimObject.mapCommand(command.key, command.type, command.id, {}, { context: command.context });
@@ -636,8 +641,7 @@ export class LatexSuiteSettingTab extends PluginSettingTab {
 					const oldValue: string = this.plugin.settings.vimMatrixEnter;
 					this.plugin.settings.vimMatrixEnter = value;
 					await this.plugin.saveSettings();
-					//@ts-ignore
-					const vimObj: Vim | null = window?.CodeMirrorAdapter?.Vim;
+					const vimObj = getVimAdapter();
 					if (!vimObj) return;
 					vimObj.unmap(oldValue, "normal");
 					const command: vimCommand = getVimRunMatrixEnterCommand(this.plugin.settings);
@@ -649,18 +653,15 @@ export class LatexSuiteSettingTab extends PluginSettingTab {
 		vimSettings.push(matrixEnter);
 		// shows/hides the vim settings, since these settings are not needed if vim is not enabled.
 		vimEnabled.addToggle((toggle) => {
-			//@ts-ignore
-			const  vimOn: boolean = this.plugin.settings.vimEnabled && app?.isVimEnabled();
+			const vimOn = this.plugin.settings.vimEnabled;
 			vimSettings.forEach(setting => setting.settingEl.toggleClass("hidden", !vimOn));
 			toggle
-			//@ts-ignore app.isVimEnabled() is not documented
-				.setValue(this.plugin.settings.vimEnabled && app?.isVimEnabled())
+				.setValue(this.plugin.settings.vimEnabled)
 				.onChange(async (value) => {
 					this.plugin.settings.vimEnabled = value;
 					await this.plugin.saveSettings();
 					vimSettings.forEach(setting => setting.settingEl.toggleClass("hidden", !value));
-					//@ts-ignore undocumented object
-					const vimObject: Vim | null = window?.CodeMirrorAdapter?.Vim;
+					const vimObject = getVimAdapter();
 					if (!vimObject) return;
 					for (const command of getVimEditorCommands(this.plugin.settings)) {
 						vimObject.unmap(command.key, command.context);
@@ -680,7 +681,6 @@ export class LatexSuiteSettingTab extends PluginSettingTab {
 
 		const validityText = validity.createDiv("snippets-editor-validity-text");
 		validityText.addClass("setting-item-description");
-		validityText.style.padding = "0";
 
 
 		function updateValidityIndicator(success: boolean) {
@@ -691,32 +691,40 @@ export class LatexSuiteSettingTab extends PluginSettingTab {
 		}
 
 
-		const extensions = basicSetup;
-
-		const change = EditorView.updateListener.of(async (v: ViewUpdate) => {
-			if (v.docChanged) {
-				const snippets = v.state.doc.toString();
-				let success = true;
-
-				let snippetVariables;
-				try {
-					snippetVariables = await parseSnippetVariables(this.plugin.settings.snippetVariables)
-					await parseSnippets(snippets, snippetVariables);
-				}
-				catch {
-					success = false;
-				}
-
-				updateValidityIndicator(success);
-
-				if (!success) return;
-
-				this.plugin.settings.snippets = snippets;
-				await this.plugin.saveSettings();
+		let validationGeneration = 0;
+		const validateAndSave = debounce(async (
+			snippets: string,
+			generation: number,
+		) => {
+			let success = true;
+			try {
+				const snippetVariables = await parseSnippetVariables(
+					this.plugin.settings.snippetVariables,
+				);
+				await parseSnippets(snippets, snippetVariables);
 			}
+			catch {
+				success = false;
+			}
+
+			if (generation !== validationGeneration) return;
+			updateValidityIndicator(success);
+			if (!success) return;
+
+			this.plugin.settings.snippets = snippets;
+			await this.plugin.saveSettings();
+		}, 300, true);
+
+		const change = EditorView.updateListener.of((viewUpdate: ViewUpdate) => {
+			if (!viewUpdate.docChanged) return;
+			validationGeneration += 1;
+			void validateAndSave(
+				viewUpdate.state.doc.toString(),
+				validationGeneration,
+			);
 		});
 
-		extensions.push(change);
+		const extensions = [...basicSetup, change];
 
 		this.snippetsEditor = createCMEditor(this.plugin.settings.snippets, extensions);
 		customCSSWrapper.appendChild(this.snippetsEditor.dom);
@@ -726,12 +734,14 @@ export class LatexSuiteSettingTab extends PluginSettingTab {
 		const reset = new ButtonComponent(buttonsDiv);
 		reset.setIcon("switch")
 			.setTooltip("Reset to default snippets")
-			.onClick(async () => {
-				new ConfirmationModal(this.plugin.app,
-					"Are you sure? This will delete any custom snippets you have written.",
-					button => button
-						.setButtonText("Reset to default snippets")
-						.setWarning(),
+				.onClick(() => {
+					new ConfirmationModal(this.plugin.app,
+						"Are you sure? This will delete any custom snippets you have written.",
+						button => {
+							button.setButtonText("Reset to default snippets");
+							// Kept for compatibility below Obsidian 1.13.
+							button.setWarning();
+						},
 					async () => {
 						this.snippetsEditor.setState(EditorState.create({ doc: DEFAULT_SNIPPETS, extensions: extensions }));
 						updateValidityIndicator(true);
@@ -746,12 +756,14 @@ export class LatexSuiteSettingTab extends PluginSettingTab {
 		const remove = new ButtonComponent(buttonsDiv);
 		remove.setIcon("trash")
 			.setTooltip("Remove all snippets")
-			.onClick(async () => {
-				new ConfirmationModal(this.plugin.app,
-					"Are you sure? This will delete any custom snippets you have written.",
-					button => button
-						.setButtonText("Remove all snippets")
-						.setWarning(),
+				.onClick(() => {
+					new ConfirmationModal(this.plugin.app,
+						"Are you sure? This will delete any custom snippets you have written.",
+						button => {
+							button.setButtonText("Remove all snippets");
+							// Kept for compatibility below Obsidian 1.13.
+							button.setWarning();
+						},
 					async () => {
 						const value = `[
 
@@ -794,10 +806,13 @@ class ConfirmationModal extends Modal {
 		new Setting(this.contentEl)
 			.addButton(button => {
 				buttonCallback(button);
-				button.onClick(async () => {
-					await clickCallback();
-					this.close();
-				});
+					button.onClick(() => {
+						void clickCallback()
+							.then(() => this.close())
+							.catch((error) => {
+								new Notice(`LaTeX Suite Rev could not save settings: ${error}`);
+							});
+					});
 			})
 			.addButton(button => button
 				.setButtonText("Cancel")
@@ -823,6 +838,11 @@ export function isIMESupported(): boolean {
 function getTriggerHelpText(name: string) {
 	const fragment = new DocumentFragment();
 	const div = fragment.createDiv();
-	div.innerHTML = `What key to press to trigger ${name}. Should follow codemirror keymap syntax such as "Ctrl-k Ctrl-a". For more info see <a href="https://codemirror.net/docs/ref/#view.KeyBinding">codemirror keymap documentation</a>.`;
+	div.appendText(`What key to press to trigger ${name}. Should follow CodeMirror keymap syntax such as "Ctrl-k Ctrl-a". For more information, see the `);
+	div.createEl("a", {
+		text: "CodeMirror keymap documentation",
+		href: "https://codemirror.net/docs/ref/#view.KeyBinding",
+	});
+	div.appendText(".");
 	return fragment;
 }

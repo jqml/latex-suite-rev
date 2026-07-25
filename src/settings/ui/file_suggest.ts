@@ -1,16 +1,21 @@
-// Credits to https://github.com/liamcain/obsidian-periodic-notes
+import { AbstractInputSuggest, App, TAbstractFile, Vault } from "obsidian";
 
-import { TAbstractFile, Vault } from "obsidian";
+export class FileSuggest extends AbstractInputSuggest<TAbstractFile> {
+	private readonly inputEl: HTMLInputElement;
+	private readonly vault: Vault;
 
-import { TextInputSuggest } from "./suggest";
+	constructor(app: App, inputEl: HTMLInputElement) {
+		super(app, inputEl);
+		this.inputEl = inputEl;
+		this.vault = app.vault;
+	}
 
-export class FileSuggest extends TextInputSuggest<TAbstractFile> {
-	getSuggestions(inputStr: string): TAbstractFile[] {
+	protected getSuggestions(inputStr: string): TAbstractFile[] {
 
 		const files: TAbstractFile[] = [];
 		const lowerCaseInputStr = inputStr.toLowerCase();
 
-		Vault.recurseChildren(this.app.vault.getRoot(), (file) => {
+		Vault.recurseChildren(this.vault.getRoot(), (file) => {
 			if (file.path.toLowerCase().contains(lowerCaseInputStr)) {
 				files.push(file);
 			}
@@ -24,7 +29,7 @@ export class FileSuggest extends TextInputSuggest<TAbstractFile> {
 	}
 
 	selectSuggestion(file: TAbstractFile): void {
-		this.inputEl.value = file.path;
+		this.setValue(file.path);
 		this.inputEl.trigger("input");
 		this.close();
 	}

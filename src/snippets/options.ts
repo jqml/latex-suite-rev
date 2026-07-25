@@ -75,6 +75,7 @@ export class Mode {
 		this.text = false;
 		this.blockMath = false;
 		this.inlineMath = false;
+		this.codeMath = false;
 		this.code = false;
 		this.textEnv = false;
 	}

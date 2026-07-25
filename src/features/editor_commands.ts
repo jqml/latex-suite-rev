@@ -3,7 +3,8 @@ import { EditorView } from "@codemirror/view";
 import { replaceRange, setCursor, setSelection } from "../utils/editor_utils";
 import LatexSuitePlugin from "src/main";
 import { getContextPlugin } from "src/utils/context";
-import { CodeMirrorEditor, Vim } from "src/utils/vim_types";
+import { CodeMirrorEditor } from "src/utils/vim_types";
+import { getVimAdapter } from "src/utils/vim";
 import { LatexSuitePluginSettings } from "src/settings/settings";
 import { newlineMatrixShortcut} from "./matrix_shortcuts";
 import { insertNewlineAndIndent } from "@codemirror/commands";
@@ -33,7 +34,7 @@ function boxCurrentEquation(view: EditorView) {
 
 function getBoxEquationCommand() {
 	return {
-		id: "latex-suite-box-equation",
+		id: "box-equation",
 		name: "Box current equation",
 		editorCheckCallback: (checking: boolean, editor: Editor) => {
 
@@ -56,7 +57,7 @@ function getBoxEquationCommand() {
 
 function getSelectEquationCommand() {
 	return {
-		id: "latex-suite-select-equation",
+		id: "select-equation",
 		name: "Select current equation",
 		editorCheckCallback: (checking: boolean, editor: Editor) => {
 
@@ -90,7 +91,7 @@ function getSelectEquationCommand() {
 
 function getEnableAllFeaturesCommand(plugin: LatexSuitePlugin) {
 	return {
-		id: "latex-suite-enable-all-features",
+		id: "enable-all-features",
 		name: "Enable all features",
 		callback: async () => {
 			plugin.settings.snippetsEnabled = true;
@@ -107,7 +108,7 @@ function getEnableAllFeaturesCommand(plugin: LatexSuitePlugin) {
 
 function getDisableAllFeaturesCommand(plugin: LatexSuitePlugin) {
 	return {
-		id: "latex-suite-disable-all-features",
+		id: "disable-all-features",
 		name: "Disable all features",
 		callback: async () => {
 			plugin.settings.snippetsEnabled = false;
@@ -123,7 +124,7 @@ function getDisableAllFeaturesCommand(plugin: LatexSuitePlugin) {
 
 function getToggleAllFeaturesCommand(plugin: LatexSuitePlugin) {
 	return {
-		id: "latex-suite-toggle-all-features",
+		id: "toggle-all-features",
 		name: "Toggle all features",
 		callback: async () => {
 			const on =
@@ -145,7 +146,7 @@ function getToggleAllFeaturesCommand(plugin: LatexSuitePlugin) {
 
 function getToggleConcealCommand(plugin: LatexSuitePlugin) {
 	return {
-		id: "latex-suite-toggle-conceal",
+		id: "toggle-conceal",
 		name: "Toggle conceal",
 		callback: async () => {
 			plugin.settings.concealEnabled = !plugin.settings.concealEnabled;
@@ -177,13 +178,12 @@ export interface vimCommand {
 
 export function getVimSelectModeCommand(settings: LatexSuitePluginSettings): vimCommand {
 	return {
-		id: "latex-suite-vim-select-mode",
+		id: "vim-select-mode",
 		defineType: "defineAction",
 		type: "action",
 		// copies current selection and selects it again since changing vim modes deletes the selection
 		action: (cm: CodeMirrorEditor) => {
-			//@ts-ignore undocumented object
-			const vimObject: Vim | null = window?.CodeMirrorAdapter?.Vim;
+			const vimObject = getVimAdapter();
 			if (!vimObject) return;
 			const selection: EditorSelection[] = cm.listSelections();
 			vimObject.enterInsertMode(cm);
@@ -196,15 +196,14 @@ export function getVimSelectModeCommand(settings: LatexSuitePluginSettings): vim
 
 export function getVimVisualModeCommand(settings: LatexSuitePluginSettings): vimCommand {
 	return {
-		id: "latex-suite-vim-visual-mode",
+		id: "vim-visual-mode",
 		defineType: "defineAction",
 		type: "action",
 		// copies current selection and selects it again since changing vim modes deletes the selection
 		action: (cm: CodeMirrorEditor) => {
 			if (!cm.somethingSelected()) return;
 			const selection: EditorSelection[] = cm.listSelections();
-			//@ts-ignore undocumented object
-			const vimObject: Vim | null = window?.CodeMirrorAdapter?.Vim;
+			const vimObject = getVimAdapter();
 			if (!vimObject) return;
 			vimObject.exitInsertMode(cm);
 			cm.setSelections(selection);
@@ -216,12 +215,11 @@ export function getVimVisualModeCommand(settings: LatexSuitePluginSettings): vim
 
 export function getVimRunMatrixEnterCommand(settings: LatexSuitePluginSettings): vimCommand {
 	return {
-		id: "latex-suite-vim-special-enter",
+		id: "vim-special-enter",
 		defineType: "defineAction",
 		type: "action",
 		action: (cm: CodeMirrorEditor) => {
-			//@ts-ignore
-			const vimObj: Vim | null = window?.CodeMirrorAdapter?.Vim;
+			const vimObj = getVimAdapter();
 			if (!vimObj) return;
 			const cursorLine: number = cm.getCursor().line;
 			const line: string = cm.getLine(cursorLine);

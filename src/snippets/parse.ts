@@ -1,4 +1,14 @@
-import { optional, object, string as string_, union, instance, parse, number, Output, special } from "valibot";
+import {
+	custom,
+	InferOutput,
+	instance,
+	number,
+	object,
+	optional,
+	parse,
+	string as string_,
+	union,
+} from "valibot";
 import { encode } from "js-base64";
 import { RegexSnippet, serializeSnippetLike, Snippet, StringSnippet, VISUAL_SNIPPET_MAGIC_SELECTION_PLACEHOLDER, VisualSnippet } from "./snippets";
 import { Options } from "./options";
@@ -104,7 +114,12 @@ async function importModuleDefault(module: string): Promise<unknown> {
 
 const RawSnippetSchema = object({
 	trigger: union([string_(), instance(RegExp)]),
-	replacement: union([string_(), special<AnyFunction>(x => typeof x === "function")]),
+	replacement: union([
+		string_(),
+		custom<AnyFunction>((value): value is AnyFunction =>
+			typeof value === "function"
+		),
+	]),
 	options: string_(),
 	flags: optional(string_(), ""),
 	priority: optional(number(), 0),
@@ -113,7 +128,7 @@ const RawSnippetSchema = object({
 	language: optional(string_()),
 });
 
-type RawSnippet = Output<typeof RawSnippetSchema>;
+type RawSnippet = InferOutput<typeof RawSnippetSchema>;
 
 /**
  * tries to parse an unknown value as an array of raw snippets
@@ -234,7 +249,7 @@ function insertSnippetVariables(trigger: string, variables: SnippetVariables) {
 
 function getExcludedEnvironments(trigger: string): Environment[] {
 	const result = [];
-	if (EXCLUSIONS.hasOwnProperty(trigger)) {
+	if (Object.prototype.hasOwnProperty.call(EXCLUSIONS, trigger)) {
 		result.push(...EXCLUSIONS[trigger]);
 	}
 	return result;
@@ -267,7 +282,5 @@ function normalizeKeyName(name: string) {
 	return result;
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 type Fn<Args extends readonly any[], Ret> = (...args: Args) => Ret;
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 type AnyFunction = Fn<any, any>;

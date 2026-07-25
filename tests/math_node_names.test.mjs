@@ -46,6 +46,31 @@ test("recognizes heading-tagged inline opening and closing delimiters", () => {
 	assert.equal(isCloseMathNode(headingClose), true);
 });
 
+test("recognizes structural components without depending on their order", () => {
+	for (const structuralComponent of [
+		"list-2",
+		"list-3",
+		"header-1",
+		"header-3",
+		"header-4",
+		"header-5",
+		"header-6",
+		"quote",
+		"callout",
+		"table",
+		"property",
+		"task-list",
+	]) {
+		const open =
+			`formatting_${structuralComponent}_formatting-math_keyword_math_formatting-math-begin`;
+		const close =
+			`math_formatting-math-end_${structuralComponent}_keyword_formatting-math_formatting`;
+		assert.equal(isOpenMathNode(open), true, structuralComponent);
+		assert.equal(isInlineMathOpenNode(open), true, structuralComponent);
+		assert.equal(isCloseMathNode(close), true, structuralComponent);
+	}
+});
+
 test("classifies the delimiters from the captured failing list transaction", () => {
 	const capturedFailure = {
 		document: "\nNot working:\n$ss$\n- xx\n$ssba$\n",
@@ -88,9 +113,36 @@ test("rejects unrelated formatting nodes", () => {
 	}
 });
 
+test("requires complete delimiter components instead of matching substrings", () => {
+	for (const name of [
+		"prefixformatting_formatting-math_formatting-math-begin_keyword_math",
+		"formatting_formatting-math_prefix-formatting-math-begin_keyword_math",
+		"formatting_formatting-math_formatting-math-begin_prefix-keyword_math",
+		"formatting_formatting-math_formatting-math-begin_keyword_math-content",
+	]) {
+		assert.equal(isOpenMathNode(name), false);
+		assert.equal(isCloseMathNode(name), false);
+	}
+});
+
+test("rejects hashtag components regardless of component order", () => {
+	for (const name of [
+		`formatting_${nativeInlineOpen}_hashtag`,
+		`formatting-math-begin_keyword_math_formatting_hashtag-end_formatting-math`,
+		`meta_formatting-math-end_keyword_math_formatting_formatting-math`,
+	]) {
+		assert.equal(isOpenMathNode(name), false);
+		assert.equal(isCloseMathNode(name), false);
+	}
+});
+
 test("keeps inline and display classification independent", () => {
 	for (const name of [nativeInlineOpen, listInlineOpen, headingInlineOpen]) {
 		assert.equal(isInlineMathOpenNode(name), true);
 	}
 	assert.equal(isInlineMathOpenNode(nativeDisplayOpen), false);
+	assert.equal(
+		isInlineMathOpenNode(`${nativeInlineOpen}_not-math-block`),
+		true,
+	);
 });

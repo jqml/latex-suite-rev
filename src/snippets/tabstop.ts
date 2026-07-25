@@ -1,4 +1,4 @@
-import { ChangeDesc, EditorSelection, SelectionRange } from "@codemirror/state";
+import { ChangeDesc, EditorSelection, Range, SelectionRange } from "@codemirror/state";
 import { Decoration, DecorationSet, EditorView, WidgetType } from "@codemirror/view";
 import { resetCursorBlink } from "src/utils/editor_utils";
 import { endSnippet } from "./codemirror/history";
@@ -15,11 +15,17 @@ export interface TabstopSpec {
 function getMarkerDecoration(from: number, to: number, color: number) {
     const className = `${LATEX_SUITE_TABSTOP_DECO_CLASS} ${LATEX_SUITE_TABSTOP_DECO_CLASS}-${color}`;
 
-    return Decoration.mark({
+	const marker = Decoration.mark({
         inclusive: true,
         color: color,
         class: className,
-    }).range(from, to);
+    });
+	if (from === to) {
+		// Empty marks are normally disallowed, but a point tabstop must map like
+		// a mark so it grows when the user types into it.
+		return Decoration.prototype.range.call(marker, from, to) as Range<Decoration>;
+	}
+	return marker.range(from, to);
 }
 
 export class TabstopGroup {
@@ -95,6 +101,13 @@ export class TabstopGroup {
     map(changes: ChangeDesc) {
         this.decos = this.decos.map(changes);
     }
+
+	copy() {
+		const copy = new TabstopGroup([], this.color);
+		copy.decos = this.decos;
+		copy.hidden = this.hidden;
+		return copy;
+	}
     
     getRanges() {
         const ranges = [];
@@ -147,7 +160,7 @@ export function getEditorSelectionEndpoints(sel: EditorSelection) {
 
 const FieldMarker = Decoration.widget({widget: new class extends WidgetType {
 		toDOM() {
-			const span = document.createElement("span");
+			const span = createSpan();
 			span.className = "cm-snippetFieldPosition";
 			return span
 		}

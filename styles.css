@@ -1,6 +1,6 @@
 /* Settings panel */
 
-.setting-item.hidden {
+.latex-suite-settings .setting-item.hidden {
     display: none;
 }
 
@@ -133,7 +133,7 @@ nesting multiple decorations. */
     --placeholder-outline: #87cefa6e;
 }
 
-.theme-dark .latex-suite-snippet-placeholder-0, span.latex-suite-snippet-placeholder-0 span {
+.theme-dark .latex-suite-snippet-placeholder-0, .theme-dark span.latex-suite-snippet-placeholder-0 span {
     --placeholder-outline: #87cefa43;
 }
 
@@ -142,7 +142,7 @@ nesting multiple decorations. */
     --placeholder-outline: #ffa5006b;
 }
 
-.theme-dark .latex-suite-snippet-placeholder-1, span.latex-suite-snippet-placeholder-1 span {
+.theme-dark .latex-suite-snippet-placeholder-1, .theme-dark span.latex-suite-snippet-placeholder-1 span {
     --placeholder-outline: #ffa5004d;
 }
 
@@ -151,7 +151,7 @@ nesting multiple decorations. */
     --placeholder-outline: #00ff0060;
 }
 
-.theme-dark .latex-suite-snippet-placeholder-2, span.latex-suite-snippet-placeholder-2 span {
+.theme-dark .latex-suite-snippet-placeholder-2, .theme-dark span.latex-suite-snippet-placeholder-2 span {
     --placeholder-outline: #00ff003d;
 }
 
@@ -262,3 +262,6 @@ and limit the height.
     margin: 0 -0.7px -.7em;
     border-left: 1.4px dotted #888;
   }
+.snippets-editor-validity-text {
+	padding: 0;
+}

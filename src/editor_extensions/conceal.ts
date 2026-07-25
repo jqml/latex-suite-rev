@@ -11,7 +11,7 @@ export type Replacement = {
 	end: number,
 	text: string,
 	class?: string,
-	elementType?: string,
+	elementType?: keyof HTMLElementTagNameMap,
 };
 
 export type ConcealSpec = Replacement[];
@@ -37,9 +37,9 @@ type ConcealAction = "conceal" | "reveal" | "delay";
 
 class ConcealWidget extends WidgetType {
 	private readonly className: string;
-	private readonly elementType: string;
+	private readonly elementType: keyof HTMLElementTagNameMap;
 
-	constructor(readonly symbol: string, className?: string, elementType?: string) {
+	constructor(readonly symbol: string, className?: string, elementType?: keyof HTMLElementTagNameMap) {
 		super();
 
 		this.className = className ? className : "";
@@ -51,7 +51,7 @@ class ConcealWidget extends WidgetType {
 	}
 
 	toDOM() {
-		const span = document.createElement(this.elementType);
+		const span = createEl(this.elementType);
 		span.className = "cm-math " + this.className;
 		span.textContent = this.symbol;
 		return span;
@@ -73,7 +73,7 @@ class TextWidget extends WidgetType {
 	}
 
 	toDOM() {
-		const span = document.createElement("span");
+		const span = createSpan();
 		span.className = "cm-math";
 		span.textContent = this.symbol;
 		return span;

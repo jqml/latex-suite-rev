@@ -5,12 +5,12 @@ import { Bounds, getContextPlugin } from "src/utils/context";
 import { queueSnippet } from "src/snippets/codemirror/snippet_queue_state_field";
 import { expandSnippets } from "src/snippets/snippet_management";
 import { taboutByEnclosedBrackets } from "./tabout";
+import { getMatrixLineIndent } from "src/utils/matrix_line";
 
 const newlineMatrixShortcutCallback = (view: EditorView): boolean => {
 	const ctx = getContextPlugin(view);
 	const cur_line = view.state.doc.lineAt(ctx.pos);
-	const current_matrix_line = cur_line.text.match(/(?<=\\begin{[^]]*}|\\\\|^)(\s|&)+/);
-	const added_cells = current_matrix_line?.[0].trimStart() ?? ""
+	const added_cells = getMatrixLineIndent(cur_line.text);
 	if (ctx.mode.blockMath) {
 		// Keep current indentation and callout characters
 		queueSnippet(view, ctx.pos, ctx.pos, ` \\\\\n${added_cells}$0`);

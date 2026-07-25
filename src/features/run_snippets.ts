@@ -41,6 +41,7 @@ const runSnippetCursor = (view: EditorView, ctx: Context, snippetInfo: SnippetIn
 
 	const settings = getLatexSuiteConfig(view);
 	const {from, to} = range;
+	const mode = ctx.getModeAt(to);
 	const sel = view.state.sliceDoc(from, to);
 	const line = view.state.sliceDoc(0, to);
 	const key = snippetInfo.key ?? "";
@@ -52,7 +53,7 @@ const runSnippetCursor = (view: EditorView, ctx: Context, snippetInfo: SnippetIn
 	for (let i=0; i < snippetInfo.snippets.length; i++) {
 		const snippet = snippetInfo.snippets[i];
 
-		if (!snippetShouldRunInMode(snippet.options, ctx.mode)) {
+		if (!snippetShouldRunInMode(snippet.options, mode)) {
 			continue;
 		}
 
@@ -64,7 +65,7 @@ const runSnippetCursor = (view: EditorView, ctx: Context, snippetInfo: SnippetIn
 		// in practice, a snippet should have very few excluded environments, if any,
 		// so the cost of this check shouldn't be very high
 		for (const environment of snippet.excludedEnvironments) {
-			if (ctx.isWithinEnvironment(to, environment)) { isExcluded = true; }
+			if (ctx.isWithinEnvironment(to, environment, mode)) { isExcluded = true; }
 		}
 		// we could've used a labelled outer for loop to `continue` from within the inner for loop,
 		// but labels are extremely rarely used, so we do this construction instead
@@ -80,8 +81,8 @@ const runSnippetCursor = (view: EditorView, ctx: Context, snippetInfo: SnippetIn
 		let replacement = result.replacement;
 
 		// When in inline math, remove any spaces at the end of the replacement
-		if (ctx.mode.inlineMath && settings.removeSnippetWhitespace) {
-			replacement = trimWhitespace(replacement, ctx);
+		if (mode.inlineMath && settings.removeSnippetWhitespace) {
+			replacement = trimWhitespace(replacement);
 		}
 
 		// Expand the snippet
@@ -91,22 +92,22 @@ const runSnippetCursor = (view: EditorView, ctx: Context, snippetInfo: SnippetIn
 
 		const containsTrigger = settings.autoEnlargeBracketsTriggers.some(word => replacement.contains(word));
 		if (debug === "info" || debug === "verbose") {
-			const trigger = snippet.trigger.toString()
-			const triggerKey = snippet.triggerKey ? `<li>Trigger key: ${new Option(snippet.triggerKey).innerHTML}\n</li>` : "";
-			const description = snippet.description;
-			const message = "Latex Suite: <br><ul>" +
-				`<li>Description: ${new Option(description).innerHTML}\n</li>` +
-				`<li>Parsed trigger: <code>${new Option(trigger).innerHTML}</code>\n</li>`+
-				triggerKey + 
-				`<li>Replacement: <code>${new Option(replacement).innerHTML}</code>\n</li>` +
-				`<li>Auto-enlarge brackets: ${containsTrigger}\n</li>` +
-				"</ul>";
 			const fragment = new DocumentFragment();
-			const div = fragment.createDiv()
-			div.innerHTML = message;
+			fragment.createDiv({ text: "LaTeX Suite Rev:" });
+			const list = fragment.createEl("ul");
+			const addItem = (label: string, value: string, code = false) => {
+				const item = list.createEl("li");
+				item.appendText(`${label}: `);
+				if (code) item.createEl("code", { text: value });
+				else item.appendText(value);
+			};
+			addItem("Description", snippet.description);
+			addItem("Parsed trigger", snippet.trigger.toString(), true);
+			if (snippet.triggerKey) addItem("Trigger key", snippet.triggerKey);
+			addItem("Replacement", replacement, true);
+			addItem("Auto-enlarge brackets", String(containsTrigger));
 			lastNotice?.hide();
 			lastNotice = new Notice(fragment, 5000);
-			console.info(div.textContent)
 		}
 		if (debug === "verbose") {
 			console.debug({
@@ -118,7 +119,7 @@ const runSnippetCursor = (view: EditorView, ctx: Context, snippetInfo: SnippetIn
 						options: s.options,
 						replacement: s.replacement
 					})),
-				current_mode: ctx.mode,
+				current_mode: mode,
 				updatedLine,
 			});	
 		}	
@@ -164,7 +165,7 @@ const isOnWordBoundary = (state: EditorState, triggerPos: number, to: number, wo
 	return (wordDelimiters.contains(prevChar) && wordDelimiters.contains(nextChar));
 }
 
-const trimWhitespace = (replacement: string, ctx: Context) => {
+const trimWhitespace = (replacement: string) => {
 	let spaceIndex = 0;
 
 	if (replacement.endsWith(" ")) {

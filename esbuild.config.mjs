@@ -1,6 +1,6 @@
 import esbuild from "esbuild";
 import process from "process";
-import builtins from "builtin-modules";
+import { builtinModules } from "node:module";
 import inlineImportPlugin from "esbuild-plugin-inline-import";
 
 const banner =
@@ -42,7 +42,7 @@ const args = {
 		"@codemirror/tooltip",
 		"@codemirror/view",
 		"@lezer/highlight",
-		...builtins],
+		...builtinModules],
 	format: "cjs",
 	target: "es2016",
 	logLevel: "info",
