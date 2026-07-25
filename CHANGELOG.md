@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.2.0
+
+- Add a section-based settings selector that keeps exactly one mounted settings section visible at a time.
+- Present all section controls in a wrapped two-row navigator, reducing unnecessary settings-page scrolling.
+- Preserve keyboard navigation and accessible section relationships without persisting navigation state.
+
 ## 0.1.3
 
 - Correct native Live Preview list-marker padding leaking onto every token when inline math is the first content in a list item.
