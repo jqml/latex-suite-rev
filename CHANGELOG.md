@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.1.2
+
+- Replace raw data-URL snippet imports with temporary in-memory Blob modules that are always revoked.
+- Restore the official `no-unsanitized/method` lint rule repository-wide and document the single intentional Blob import.
+- Add focused regression coverage for module exports, fallback parsing, executable snippet values, cleanup, URL isolation, and the existing bar semantics.
+
 ## 0.1.1
 
 - Harden inline-math delimiter classification across Markdown structures while rejecting content and hashtag nodes.
