@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { readFile } from "node:fs/promises";
+import { readFile, readdir } from "node:fs/promises";
 import test from "node:test";
 
 test("Obsidian command IDs do not repeat a plugin identifier", async () => {
@@ -73,4 +73,30 @@ test("settings and dark-theme CSS remain scoped to plugin-owned elements", async
 			),
 		);
 	}
+});
+
+test("the Blob-module import uses one justified local lint suppression", async () => {
+	const [eslintConfig, sourcePaths] = await Promise.all([
+		readFile("eslint.config.mjs", "utf8"),
+		readdir("src", { recursive: true }),
+	]);
+	const sourceTree = (
+		await Promise.all(
+			sourcePaths
+				.filter((sourcePath) => sourcePath.endsWith(".ts"))
+				.map((sourcePath) => readFile(`src/${sourcePath}`, "utf8")),
+		)
+	).join("\n");
+	assert.doesNotMatch(
+		eslintConfig,
+		/["']no-unsanitized\/method["']\s*:\s*["']off["']/,
+	);
+	const suppressions = sourceTree.match(
+		/eslint-disable-next-line no-unsanitized\/method[^\n]*/g,
+	) ?? [];
+	assert.equal(suppressions.length, 1);
+	assert.match(suppressions[0], /--\s+\S/);
+	assert.match(suppressions[0], /in-memory Blob/);
+	assert.match(suppressions[0], /no network or filesystem URL is accepted/);
+	assert.match(suppressions[0], /intentional documented/);
 });

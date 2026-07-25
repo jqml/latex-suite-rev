@@ -45,10 +45,6 @@ export default defineConfig([
 			// Existing parser errors are strings consumed directly by Notices.
 			"@typescript-eslint/only-throw-error": "off",
 
-			// User-authored snippet modules are intentionally imported from an
-			// in-memory data URL after schema validation.
-			"no-unsanitized/method": "off",
-
 			// Imperative settings retain compatibility with Obsidian 1.4.10.
 			"obsidianmd/settings-tab/prefer-setting-definitions": "off",
 

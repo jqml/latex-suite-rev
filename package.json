@@ -1,6 +1,6 @@
 {
 	"name": "latex-suite-rev",
-	"version": "0.1.1",
+	"version": "0.1.2",
 	"description": "Type LaTeX math quickly with snippets, text expansion, and editor enhancements.",
 	"main": "main.js",
 	"type": "module",
@@ -52,7 +52,6 @@
 		"typescript": "^5.9.3"
 	},
 	"dependencies": {
-		"js-base64": "^3.7.5",
 		"valibot": "^1.4.2"
 	}
 }

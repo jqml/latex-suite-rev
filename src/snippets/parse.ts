@@ -9,34 +9,20 @@ import {
 	string as string_,
 	union,
 } from "valibot";
-import { encode } from "js-base64";
 import { RegexSnippet, serializeSnippetLike, Snippet, StringSnippet, VISUAL_SNIPPET_MAGIC_SELECTION_PLACEHOLDER, VisualSnippet } from "./snippets";
 import { Options } from "./options";
 import { sortSnippets } from "./sort";
 import { EXCLUSIONS, Environment } from "./environment";
 import { Platform } from "obsidian";
+import { importSnippetSource } from "./blob_module_loader";
 
 export type SnippetVariables = Record<string, string>;
 
-async function importRaw(maybeJavaScriptCode: string) {
-	let raw;
-	try {
-		try {
-			// first, try to import as a plain js module
-			// js-base64.encode is needed over builtin `window.btoa` because the latter errors on unicode
-			raw = await importModuleDefault(`data:text/javascript;base64,${encode(maybeJavaScriptCode)}`);
-		} catch {
-			// otherwise, try to import as a standalone js object
-			raw = await importModuleDefault(`data:text/javascript;base64,${encode(`export default ${maybeJavaScriptCode}`)}`);
-		}
-	} catch {
-		throw "Invalid format";
-	}
-	return raw;
-}
-
 export async function parseSnippetVariables(snippetVariablesStr: string) {
-	const rawSnippetVariables = await importRaw(snippetVariablesStr) as SnippetVariables;
+	const rawSnippetVariables = await importSnippetSource(
+		snippetVariablesStr,
+		"snippet-variables",
+	) as SnippetVariables;
 
 	if (Array.isArray(rawSnippetVariables))
 		throw "Cannot parse an array as a variables object";
@@ -59,7 +45,7 @@ export async function parseSnippetVariables(snippetVariablesStr: string) {
 }
 
 export async function parseSnippets(snippetsStr: string, snippetVariables: SnippetVariables) {
-	const rawSnippets = await importRaw(snippetsStr);
+	const rawSnippets = await importSnippetSource(snippetsStr, "snippets");
 
 	let parsedSnippets;
 	try {
@@ -82,32 +68,6 @@ export async function parseSnippets(snippetsStr: string, snippetVariables: Snipp
 	parsedSnippets = sortSnippets(parsedSnippets);
 
 	return parsedSnippets;
-}
-
-/** load snippet string as module */
-
-/**
- * imports the default export of a given module.
- *
- * @param module the module to import. this can be a resource path, data url, etc
- * @returns the default export of said module
- * @throws if import fails or default export is undefined
- */
-async function importModuleDefault(module: string): Promise<unknown> {
-	let data;
-	try {
-		data = await import(module);
-	} catch {
-		throw `failed to import module ${module}`;
-	}
-
-	// it's safe to use `in` here - it has a null prototype, so `Object.hasOwnProperty` isn't available,
-	// but on the other hand we don't need to worry about something further up the prototype chain messing with this check
-	if (!("default" in data)) {
-		throw `No default export provided for module ${module}`;
-	}
-
-	return data.default;
 }
 
 /** raw snippet IR */
