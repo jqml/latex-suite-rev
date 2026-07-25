@@ -1,7 +1,7 @@
 {
 	"id": "latex-suite-rev",
 	"name": "LaTeX Suite Rev",
-	"version": "0.1.2",
+	"version": "0.1.3",
 	"minAppVersion": "1.4.10",
 	"description": "Type LaTeX math quickly with snippets, text expansion, and editor enhancements.",
 	"author": "JQML",

@@ -14,6 +14,7 @@ import { snippetExtensions } from "./snippets/codemirror/extensions";
 import { concealPlugin } from "./editor_extensions/conceal";
 import { colorPairedBracketsPluginLowestPrec, highlightCursorBracketsPlugin } from "./editor_extensions/highlight_brackets";
 import { cursorTooltipBaseTheme, cursorTooltipField } from "./editor_extensions/math_tooltip";
+import { listMathLayoutPlugin } from "./editor_extensions/list_math_layout";
 import { contextPlugin, mathBoundsPlugin } from "./utils/context";
 import { getVimAdapter } from "./utils/vim";
 
@@ -183,6 +184,7 @@ export default class LatexSuitePlugin extends Plugin {
 			Prec.highest(EditorView.inputHandler.of(onInput)),
 			EditorView.updateListener.of(handleUpdate),
 			snippetExtensions,
+			listMathLayoutPlugin,
 		]);
 		
 		const latexSuiteKeymaps = getKeymaps(this.CMSettings)

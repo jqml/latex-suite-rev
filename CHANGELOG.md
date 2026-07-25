@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.1.3
+
+- Correct native Live Preview list-marker padding leaking onto every token when inline math is the first content in a list item.
+- Restore Obsidian’s semantic syntax colors for affected delimiters, variables, commands, punctuation, numbers, operators, strings, keywords, comments, and functions.
+- Preserve native MathJax rendering, blockquote and list markers, selection, bracket matching, task lists, display math, and non-list math.
+- Add regression coverage for unordered, ordered, nested, blockquote, trailing-text, task-list, display-math, escaped-dollar, and non-list structures.
+
 ## 0.1.2
 
 - Replace raw data-URL snippet imports with temporary in-memory Blob modules that are always revoked.
