@@ -29,10 +29,23 @@ if (!Array.isArray(config.vaults) || !config.vaults.length) {
 if (!config.vaults.every((vault) => typeof vault === "string" && vault.startsWith("/"))) {
 	throw new Error("Every configured vault must be an explicit absolute path");
 }
+if (new Set(config.vaults).size !== config.vaults.length) {
+	throw new Error("vaults.local.json must not contain duplicate vault paths");
+}
 
-const reports = [];
+const preflightReports = [];
 for (const vaultPath of config.vaults) {
-	reports.push(await installToVault({ vaultPath, assetsPath, dryRun }));
+	preflightReports.push(
+		await installToVault({ vaultPath, assetsPath, dryRun: true }),
+	);
+}
+const reports = dryRun
+	? preflightReports
+	: [];
+if (!dryRun) {
+	for (const vaultPath of config.vaults) {
+		reports.push(await installToVault({ vaultPath, assetsPath }));
+	}
 }
 console.log(JSON.stringify(reports, null, 2));
 
