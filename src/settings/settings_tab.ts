@@ -9,6 +9,13 @@ import { FileSuggest } from "./ui/file_suggest";
 import { basicSetup } from "./ui/snippets_editor/extensions";
 import { getVimSelectModeCommand, vimCommand, getVimVisualModeCommand, getVimEditorCommands, getVimRunMatrixEnterCommand } from "src/features/editor_commands";
 import { getVimAdapter } from "src/utils/vim";
+import {
+	getSettingsSection,
+	getSettingsSectionElementId,
+	getSettingsSectionSelection,
+	SETTINGS_SECTIONS,
+	SettingsSectionDefinition,
+} from "./settings_sections";
 
 
 export class LatexSuiteSettingTab extends PluginSettingTab {
@@ -16,6 +23,10 @@ export class LatexSuiteSettingTab extends PluginSettingTab {
 	snippetsEditor: EditorView;
 	snippetsFileLocEl: HTMLElement;
 	snippetVariablesFileLocEl: HTMLElement;
+	private readonly settingsSectionEls = new Map<string, HTMLElement>();
+	private readonly settingsNavButtons = new Map<string, HTMLButtonElement>();
+	private settingsNavEl?: HTMLElement;
+	private settingsNavCleanup: (() => void)[] = [];
 
 	constructor(app: App, plugin: LatexSuitePlugin) {
 		super(app, plugin);
@@ -24,23 +35,50 @@ export class LatexSuiteSettingTab extends PluginSettingTab {
 
 	hide() {
 		this.snippetsEditor?.destroy();
+		this.destroySettingsNavigator();
 	}
 
-	addHeading(containerEl: HTMLElement, name: string, icon = "math") {
-		const heading = new Setting(containerEl).setName(name).setHeading();
+	addHeading(
+		containerEl: HTMLElement,
+		section: SettingsSectionDefinition,
+	) {
+		const heading = new Setting(containerEl)
+			.setName(section.heading)
+			.setHeading();
 
 		const parentEl = heading.settingEl;
 		const iconEl = parentEl.createDiv();
-		setIcon(iconEl, icon);
+		setIcon(iconEl, section.icon);
 		iconEl.addClass("latex-suite-settings-icon");
 
 		parentEl.prepend(iconEl);
+		return parentEl;
+	}
+
+	private createSettingsSection(
+		section: SettingsSectionDefinition,
+	): HTMLElement {
+		const sectionEl = this.containerEl.createEl("section", {
+			cls: "latex-suite-rev-settings-section",
+			attr: {
+				id: getSettingsSectionElementId(section.id),
+				"aria-labelledby": `latex-suite-rev-settings-nav-${section.id}`,
+				"aria-hidden": "true",
+			},
+		});
+		sectionEl.hidden = true;
+		this.settingsSectionEls.set(section.id, sectionEl);
+		this.addHeading(sectionEl, section);
+		return sectionEl;
 	}
 
 	display(): void {
 		const { containerEl } = this;
+		this.destroySettingsNavigator();
 		containerEl.empty();
 		containerEl.addClass("latex-suite-settings");
+		this.settingsSectionEls.clear();
+		this.createSettingsNavigator();
 
 		this.displaySnippetSettings();
 		this.displayConcealSettings();
@@ -51,11 +89,80 @@ export class LatexSuiteSettingTab extends PluginSettingTab {
 		this.displayTaboutSettings();
 		this.displayAutoEnlargeBracketsSettings();
 		this.displayAdvancedSnippetSettings();
+		this.activateSettingsSection(SETTINGS_SECTIONS[0].id);
+	}
+
+	private createSettingsNavigator(): void {
+		const navEl = this.containerEl.createEl("nav", {
+			cls: "latex-suite-rev-settings-nav",
+			attr: { "aria-label": "Settings sections" },
+		});
+		const trackEl = navEl.createDiv(
+			"latex-suite-rev-settings-nav-track",
+		);
+
+		this.settingsNavEl = navEl;
+		this.settingsNavButtons.clear();
+
+		for (const section of SETTINGS_SECTIONS) {
+			const buttonEl = trackEl.createEl("button", {
+				cls: "latex-suite-rev-settings-nav-item",
+				attr: {
+					id: `latex-suite-rev-settings-nav-${section.id}`,
+					type: "button",
+					"aria-controls": getSettingsSectionElementId(section.id),
+				},
+			});
+			const iconEl = buttonEl.createSpan({
+				cls: "latex-suite-rev-settings-nav-icon",
+			});
+			setIcon(iconEl, section.icon);
+			buttonEl.createSpan({
+				cls: "latex-suite-rev-settings-nav-label",
+				text: section.label,
+			});
+
+			const activate = () => this.activateSettingsSection(section.id);
+			buttonEl.addEventListener("click", activate);
+			this.settingsNavCleanup.push(() =>
+				buttonEl.removeEventListener("click", activate)
+			);
+			this.settingsNavButtons.set(section.id, buttonEl);
+		}
+	}
+
+	private activateSettingsSection(sectionId: string): void {
+		if (!this.settingsSectionEls.has(sectionId)) return;
+		for (const [id, active] of getSettingsSectionSelection(sectionId)) {
+			const section = getSettingsSection(id);
+			const sectionEl = this.settingsSectionEls.get(section.id);
+			if (!sectionEl) {
+				throw new Error(`Settings section was not registered: ${section.id}`);
+			}
+			sectionEl.hidden = !active;
+			sectionEl.setAttribute("aria-hidden", String(!active));
+
+			const buttonEl = this.settingsNavButtons.get(section.id);
+			if (!buttonEl) continue;
+			buttonEl.classList.toggle("is-active", active);
+			if (active) buttonEl.setAttribute("aria-current", "page");
+			else buttonEl.removeAttribute("aria-current");
+		}
+		this.containerEl.scrollTop = 0;
+	}
+
+	private destroySettingsNavigator(): void {
+		for (const cleanup of this.settingsNavCleanup.splice(0)) cleanup();
+		this.settingsNavEl?.remove();
+		this.settingsNavEl = undefined;
+		this.settingsNavButtons.clear();
+		this.settingsSectionEls.clear();
 	}
 
 	private displaySnippetSettings() {
-		const containerEl = this.containerEl;
-		this.addHeading(containerEl, "Snippets", "ballpen");
+		const containerEl = this.createSettingsSection(
+			getSettingsSection("snippets"),
+		);
 
 		new Setting(containerEl)
 			.setName("Enabled")
@@ -134,8 +241,9 @@ export class LatexSuiteSettingTab extends PluginSettingTab {
 	}
 
 	private displayConcealSettings() {
-		const containerEl = this.containerEl;
-		this.addHeading(containerEl, "Conceal", "math-integral-x");
+		const containerEl = this.createSettingsSection(
+			getSettingsSection("conceal"),
+		);
 
 		const fragment = new DocumentFragment();
 		fragment.createDiv({}, div => div.setText("Make equations more readable by hiding LaTeX syntax and instead displaying it in a pretty format."));
@@ -187,8 +295,9 @@ export class LatexSuiteSettingTab extends PluginSettingTab {
 	}
 
 	private displayColorHighlightBracketsSettings() {
-		const containerEl = this.containerEl;
-		this.addHeading(containerEl, "Highlight and color brackets", "parentheses");
+		const containerEl = this.createSettingsSection(
+			getSettingsSection("brackets"),
+		);
 
 		new Setting(containerEl)
 			.setName("Color paired brackets")
@@ -211,8 +320,9 @@ export class LatexSuiteSettingTab extends PluginSettingTab {
 	}
 
 	private displayPopupPreviewSettings() {
-		const containerEl = this.containerEl;
-		this.addHeading(containerEl, "Math popup preview", "superscript");
+		const containerEl = this.createSettingsSection(
+			getSettingsSection("preview"),
+		);
 
 		const popup_fragment = createFragment();
 		const popup_line1 = createDiv();
@@ -286,8 +396,9 @@ export class LatexSuiteSettingTab extends PluginSettingTab {
 	}
 
 	private displayAutofractionSettings() {
-		const containerEl = this.containerEl;
-		this.addHeading(containerEl, "Auto-fraction", "math-x-divide-y-2");
+		const containerEl = this.createSettingsSection(
+			getSettingsSection("auto-fraction"),
+		);
 
 		new Setting(containerEl)
 			.setName("Enabled")
@@ -344,8 +455,9 @@ export class LatexSuiteSettingTab extends PluginSettingTab {
 	}
 
 	private displayMatrixShortcutsSettings() {
-		const containerEl = this.containerEl;
-		this.addHeading(containerEl, "Matrix shortcuts", "brackets-contain");
+		const containerEl = this.createSettingsSection(
+			getSettingsSection("matrices"),
+		);
 
 		new Setting(containerEl)
 			.setName("Enabled")
@@ -372,8 +484,9 @@ export class LatexSuiteSettingTab extends PluginSettingTab {
 	}
 
 	private displayTaboutSettings() {
-		const containerEl = this.containerEl;
-		this.addHeading(containerEl, "Tabout", "tabout");
+		const containerEl = this.createSettingsSection(
+			getSettingsSection("tabout"),
+		);
 
 		new Setting(containerEl)
 			.setName("Enabled")
@@ -405,8 +518,9 @@ export class LatexSuiteSettingTab extends PluginSettingTab {
 	}
 
 	private displayAutoEnlargeBracketsSettings() {
-		const containerEl = this.containerEl;
-		this.addHeading(containerEl, "Auto-enlarge brackets", "parentheses");
+		const containerEl = this.createSettingsSection(
+			getSettingsSection("auto-enlarge"),
+		);
 
 		new Setting(containerEl)
 			.setName("Enabled")
@@ -433,8 +547,9 @@ export class LatexSuiteSettingTab extends PluginSettingTab {
 	}
 
 	private displayAdvancedSnippetSettings() {
-		const containerEl = this.containerEl;
-		this.addHeading(containerEl, "Advanced snippet settings");
+		const containerEl = this.createSettingsSection(
+			getSettingsSection("advanced"),
+		);
 
 		const snippetVariablesSetting = new Setting(containerEl)
 			.setName("Snippet variables")
