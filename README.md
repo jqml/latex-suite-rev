@@ -8,6 +8,29 @@ This distribution recognizes CodeMirror math delimiter nodes semantically when O
 
 Do not enable LaTeX Suite Rev and the official Obsidian LaTeX Suite plugin simultaneously. Both provide the same commands and editor extensions.
 
+## Why this distribution exists
+
+LaTeX Suite Rev packages a compatibility correction that was physically verified against Obsidian's current CodeMirror editor: composite math-delimiter node names can contain Markdown structure components, while upstream 1.11.5 compares those names exactly. The Rev distribution recognizes the semantic delimiter components and keeps inline and display classification separate.
+
+This remains a fork of an active project, not an original reimplementation. Compatibility fixes should be proposed upstream where practical. A Community Plugins directory submission requires publicly verifiable written approval from the upstream author under Obsidian's fork policy; that approval is not implied by the MIT license.
+
+## Compatibility and support
+
+- Minimum Obsidian version: 1.4.10.
+- Desktop: supported and tested on Obsidian 1.13.3.
+- Mobile: the runtime contains no Node.js or Electron imports and bundled regex lookbehind has been removed. A physical-device mobile smoke test is still recommended before directory submission.
+- Official Obsidian LaTeX Suite and LaTeX Suite Rev must not be enabled together.
+- Report Rev defects and compatibility problems in the [JQML issue tracker](https://github.com/jqml/latex-suite-rev/issues). Include the Obsidian version, platform, editor mode, minimal Markdown, snippet definition, and reproduction steps.
+- Questions about unchanged upstream behavior may also be relevant to the [upstream project](https://github.com/artisticat1/obsidian-latex-suite), but do not ask upstream to support Rev-specific builds.
+
+The maintenance policy is to track upstream releases and security fixes, keep Rev-only changes focused and regression-tested, and document the upstream tag or commit used by each Rev release. Version 0.1.x is based on upstream tag 1.11.5.
+
+## Privacy and security
+
+The runtime has no telemetry, advertising, updater, or network requests. It reads configured snippet and variable files through Obsidian's Vault API. Snippets are user-authored JavaScript modules and can contain replacement functions; only load snippet files you trust.
+
+The optional repository deployment scripts are separate Node.js command-line tools and are not included in the three release assets. They access only vault paths supplied explicitly by the user, create backups, and do not print `data.json` contents.
+
 ## Installation
 
 Release assets are `main.js`, `manifest.json`, and `styles.css`. Install them in:
@@ -225,7 +248,7 @@ Snippets can be edited in the plugin settings. The structure of a snippet is as 
 - `m` : Math mode. Only run this snippet inside math. Shorthand for both `M` and `n`
 - `M` : Block math mode. Only run this snippet inside a `$$ ... $$` block
 - `n` : Inline math mode. Only run this snippet inside a `$ ... $` block
-- `A` : Auto. Expand this snippet as soon as the trigger is typed. If omitted, the <kbd>Tab</kbd> key must be pressed to expand the snippet. This doesn't always work for [IME keyboards](./DOCS.md@IME-keyboards) (like chinese/pinyin, gboard, german/french diacritic keyboards).
+- `A` : Auto. Expand this snippet as soon as the trigger is typed. If omitted, the <kbd>Tab</kbd> key must be pressed to expand the snippet. This doesn't always work for [IME keyboards](./DOCS.md#ime-keyboards) (like Chinese/Pinyin, Gboard, and German/French diacritic keyboards).
 - `r` : [Regex](./DOCS.md#regex-snippets). The `trigger` will be treated as a regular expression
 - `v` : [Visual](./DOCS.md#visual-snippets). Only run this snippet on a selection. The trigger should be a single character
 - `w` : Word boundary. Only run this snippet when the trigger is preceded (and followed by) a word delimiter, such as `.`, `,`, or `-`.
