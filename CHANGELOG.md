@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.2.1
+
+- Ignore unsupported files during snippet-folder scans while preserving explicitly selected snippet files.
+- Aggregate and deduplicate parse-failure notices, retain full console diagnostics, and debounce file-watcher reload bursts.
+- Correct stale list-parser spacing and syntax colors when leaked list components affect standalone inline math.
+
 ## 0.2.0
 
 - Add a section-based settings selector that keeps exactly one mounted settings section visible at a time.
