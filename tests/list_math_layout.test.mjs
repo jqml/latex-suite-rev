@@ -3,8 +3,12 @@ import { readFile } from "node:fs/promises";
 import test from "node:test";
 
 import {
+	classifyMathLayoutLine,
+	hasLeakedListMathNodeNames,
 	MATH_ONLY_LIST_LINE_CLASS,
+	STALE_LIST_MATH_LINE_CLASS,
 	isListLeadingInlineMathLine,
+	isStandaloneInlineMathLine,
 } from "../src/editor_extensions/list_math_layout.ts";
 
 test("classifies supported list-leading inline-math structures", () => {
@@ -39,13 +43,62 @@ test("does not classify text-leading, task, display, escaped, or non-list lines"
 	}
 });
 
+test("classifies the captured standalone post-list parser leak separately", () => {
+	const source = "$s\\overline{s}$";
+	const leakedNodeNames = [
+		"formatting_formatting_formatting-list_formatting-list-ul_formatting-math_formatting-math-begin_keyword_list-1_math",
+		"formatting_formatting-list_formatting-list-ul_list-1_math_variable-2",
+		"formatting_formatting-list_formatting-list-ul_list-1_math_tag",
+		"bracket_formatting_formatting-list_formatting-list-ul_list-1_math",
+	];
+
+	assert.equal(isStandaloneInlineMathLine(source), true);
+	assert.equal(hasLeakedListMathNodeNames(leakedNodeNames), true);
+	assert.equal(
+		classifyMathLayoutLine(source, leakedNodeNames),
+		STALE_LIST_MATH_LINE_CLASS,
+	);
+	assert.equal(
+		STALE_LIST_MATH_LINE_CLASS,
+		"latex-suite-rev-stale-list-math-line",
+	);
+});
+
+test("handles ordered-list leakage but ignores clean or unrelated math", () => {
+	const orderedLeak = [
+		"formatting_formatting-list_formatting-list-ol_list-1_math_variable-2",
+	];
+	assert.equal(
+		classifyMathLayoutLine("$s\\overline{s}$", orderedLeak),
+		STALE_LIST_MATH_LINE_CLASS,
+	);
+	assert.equal(classifyMathLayoutLine("$s\\overline{s}$", ["math_variable-2"]), null);
+	assert.equal(
+		classifyMathLayoutLine("text $s\\overline{s}$", orderedLeak),
+		null,
+	);
+	assert.equal(
+		classifyMathLayoutLine("$$s\\overline{s}$$", orderedLeak),
+		null,
+	);
+	assert.equal(
+		hasLeakedListMathNodeNames(["formatting-list-ul_list-1"]),
+		false,
+	);
+});
+
 test("layout correction is a plugin-owned line decoration", async () => {
 	const source = await readFile(
 		"src/editor_extensions/list_math_layout.ts",
 		"utf8",
 	);
 	assert.equal(MATH_ONLY_LIST_LINE_CLASS, "latex-suite-rev-math-only-list-line");
+	assert.equal(
+		STALE_LIST_MATH_LINE_CLASS,
+		"latex-suite-rev-stale-list-math-line",
+	);
 	assert.match(source, /Decoration\.line\(/);
+	assert.match(source, /syntaxTree\(update\.startState\) !== syntaxTree\(update\.state\)/);
 	assert.doesNotMatch(source, /Decoration\.(?:replace|widget)\(/);
 	assert.doesNotMatch(source, /\.dispatch\(/);
 });
@@ -53,13 +106,16 @@ test("layout correction is a plugin-owned line decoration", async () => {
 test("CSS restores native semantic math colors under the owned line class", async () => {
 	const css = await readFile("styles.css", "utf8");
 	const expectedSelectors = [
-		".cm-line.latex-suite-rev-math-only-list-line .cm-math.cm-formatting-list-ul",
-		".cm-line.latex-suite-rev-math-only-list-line .cm-math.cm-formatting-list-ol",
+		".cm-line:is(.latex-suite-rev-math-only-list-line, .latex-suite-rev-stale-list-math-line) .cm-math.cm-formatting-list-ul",
+		".cm-line:is(.latex-suite-rev-math-only-list-line, .latex-suite-rev-stale-list-math-line) .cm-math.cm-formatting-list-ol",
 	];
-	for (const selector of expectedSelectors) assert.match(css, new RegExp(selector.replaceAll(".", "\\.")));
+	for (const selector of expectedSelectors) {
+		const escaped = selector.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+		assert.match(css, new RegExp(escaped));
+	}
 
 	const paddingRule = css.match(
-		/\.cm-line\.latex-suite-rev-math-only-list-line[\s\S]*?\{([\s\S]*?)\}/,
+		/\.cm-line:is\(\.latex-suite-rev-math-only-list-line, \.latex-suite-rev-stale-list-math-line\)[\s\S]*?\{([\s\S]*?)\}/,
 	);
 	assert.ok(paddingRule);
 	assert.match(paddingRule[1], /padding-inline-start:\s*0/);
@@ -90,14 +146,14 @@ test("CSS restores native semantic math colors under the owned line class", asyn
 	]);
 	for (const [tokenClass, variable] of semanticMappings) {
 		const tokenRule = new RegExp(
-			`\\.cm-line\\.latex-suite-rev-math-only-list-line \\.cm-math\\.${tokenClass}[\\s\\S]*?\\{[\\s\\S]*?color:\\s*var\\(${variable}\\)`,
+			`\\.cm-line:is\\(\\.latex-suite-rev-math-only-list-line, \\.latex-suite-rev-stale-list-math-line\\) \\.cm-math\\.${tokenClass}[\\s\\S]*?\\{[\\s\\S]*?color:\\s*var\\(${variable}\\)`,
 		);
 		assert.match(css, tokenRule, `${tokenClass} should use ${variable}`);
 	}
 
 	const scopedColorBlocks = [
 		...css.matchAll(
-			/\.cm-line\.latex-suite-rev-math-only-list-line[\s\S]*?\{([\s\S]*?color:[\s\S]*?)\}/g,
+			/\.cm-line:is\(\.latex-suite-rev-math-only-list-line, \.latex-suite-rev-stale-list-math-line\)[\s\S]*?\{([\s\S]*?color:[\s\S]*?)\}/g,
 		),
 	].map((match) => match[1]).join("\n");
 	assert.doesNotMatch(

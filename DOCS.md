@@ -246,7 +246,7 @@ On mobile devices a warning is shown that this setting is turned on, notifying t
 
 You can choose to load snippets from a file or from all files within a folder. To do this, toggle the setting **Snippets > Load snippets from file or folder**. The file or folder must be within your vault, and not in a hidden folder (such as `.obsidian/`).
 
-Snippet files can be saved with any extension. However, to obtain syntax highlighting in external editors, you may wish to save your snippet files with an extension of `.js`. If you don't have an external editor, (vscode)[https://code.visualstudio.com/] is a beginner-friendly editor to start with. If you wish to edit the snippet files inside Obsidian, you can create a regular markdown file and format it in a certain way to still get the syntax highlighting. See below.
+An explicitly selected snippet file can retain any extension for compatibility. Folder scans load only JavaScript module files ending in `.js` or `.mjs`; images, PDFs, Markdown notes, and other unrelated files are ignored. If you don't have an external editor, (vscode)[https://code.visualstudio.com/] is a beginner-friendly editor to start with.
 
 A snippets file is a Javascript module/file with a default export of an array of snippets. (The file can also contain only an array but this can mess up with syntax highlighting and its easier to break this file, so it is not recommended)
 
@@ -263,7 +263,7 @@ export default [
 ]
 ```
 
-2. A snippets file that can be edited by obsidian. For example `latex-suite-snippets.md` formatted in the following way:
+2. An explicitly selected snippets file that can be edited by Obsidian. For example `latex-suite-snippets.md` formatted in the following way:
 ~~~md
 /*
 
@@ -291,7 +291,7 @@ export default [
 */
 ~~~
 
-3. A folder called `latex-suite` with 2 snippet files in that folder called `greek.js` and `symbols_and_matrices.md`.
+3. A folder called `latex-suite` with 2 snippet modules in that folder called `greek.js` and `symbols_and_matrices.js`.
 	In the settings the snippet-path is `latex-suite`.
 	Then your vault looks like the following
 ```
@@ -369,7 +369,7 @@ On desktop the console can be opened with `(Ctrl/Cmd)-Shift-I`.
 
 You can choose to load snippet variables from a file or from all files within a folder. To do this, toggle the setting **Advanced editor settings > Snippet variables > Load snippet variables from file or folder**. The file or folder must be within your vault, and not in a hidden folder (such as `.obsidian/`).
 
-Snippet variable files can be saved with any extension. However, to obtain syntax highlighting in external editors, you may wish to save your snippet variable files with an extension of `.js`.
+An explicitly selected snippet-variable file can retain any extension for compatibility. Folder scans load only JavaScript module files ending in `.js` or `.mjs`.
 
 A snippet variable file is a JavaScript object, or a JavaScript module with a default export of an object.
 

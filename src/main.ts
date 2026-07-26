@@ -17,12 +17,19 @@ import { cursorTooltipBaseTheme, cursorTooltipField } from "./editor_extensions/
 import { listMathLayoutPlugin } from "./editor_extensions/list_math_layout";
 import { contextPlugin, mathBoundsPlugin } from "./utils/context";
 import { getVimAdapter } from "./utils/vim";
+import {
+	type ExternalFileLoadFailure,
+	ExternalFileFailureNoticeTracker,
+	summarizeExternalFileFailures,
+} from "./settings/external_file_loading";
 
 export default class LatexSuitePlugin extends Plugin {
 	settings: LatexSuitePluginSettings;
 	CMSettings: LatexSuiteCMSettings;
 	editorExtensions: Extension[] = [];
 	private mathJaxLoad: Promise<void> | null = null;
+	private externalFileFailureNotices =
+		new ExternalFileFailureNoticeTracker();
 
 	async onload() {
 		await this.loadSettings();
@@ -131,14 +138,19 @@ export default class LatexSuitePlugin extends Plugin {
 		// Get files in snippet/variable folders.
 		// If either is set to be loaded from settings the set will just be empty.
 		const files = getFileSets(this);
+		const failures: ExternalFileLoadFailure[] = [];
 
 		const snippetVariables =
 			this.settings.loadSnippetVariablesFromFile
-				? await getVariablesFromFiles(this, files)
+				? await getVariablesFromFiles(this, files, failures)
 				: await this.getSettingsSnippetVariables();
 
 		// This must be done in either case, because it also updates the set of snippet files
-		const unknownFileVariables = await tryGetVariablesFromUnknownFiles(this, files);
+		const unknownFileVariables = await tryGetVariablesFromUnknownFiles(
+			this,
+			files,
+			failures,
+		);
 		if (this.settings.loadSnippetVariablesFromFile) {
 			// But we only use the values if the user wants them
 			Object.assign(snippetVariables, unknownFileVariables);
@@ -146,12 +158,29 @@ export default class LatexSuitePlugin extends Plugin {
 
 		const snippets =
 			this.settings.loadSnippetsFromFile
-				? await getSnippetsFromFiles(this, files, snippetVariables)
+				? await getSnippetsFromFiles(this, files, snippetVariables, failures)
 				: await this.getSettingsSnippets(snippetVariables);
 
-		this.showSnippetsLoadedNotice(snippets.length, Object.keys(snippetVariables).length,  becauseFileLocationUpdated, becauseFileUpdated);
+		const hadFailures = this.showExternalFileFailureNotice(failures);
+		if (!hadFailures) {
+			this.showSnippetsLoadedNotice(
+				snippets.length,
+				Object.keys(snippetVariables).length,
+				becauseFileLocationUpdated,
+				becauseFileUpdated,
+			);
+		}
 
 		return snippets;
+	}
+
+	showExternalFileFailureNotice(
+		failures: readonly ExternalFileLoadFailure[],
+	): boolean {
+		if (this.externalFileFailureNotices.shouldNotify(failures)) {
+			new Notice(summarizeExternalFileFailures(failures), 10000);
+		}
+		return failures.length > 0;
 	}
 
 	async processSettings(becauseFileLocationUpdated = false, becauseFileUpdated = false) {

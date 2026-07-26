@@ -223,63 +223,63 @@ nesting multiple decorations. */
 
 /*
 Obsidian can classify every source token as list formatting when inline math is
-the first content in a list item. Its native list-marker padding then applies to
-each math token. The legacy-named line class is owned by LaTeX Suite Rev and is
-added only to affected lines.
+the first content in a list item or, in a stale parse, in a standalone paragraph.
+Its native list-marker padding then applies to each math token. Both line classes
+are owned by LaTeX Suite Rev and are added only to affected source lines.
 */
-.cm-line.latex-suite-rev-math-only-list-line .cm-math.cm-formatting-list-ul,
-.cm-line.latex-suite-rev-math-only-list-line .cm-math.cm-formatting-list-ol {
+.cm-line:is(.latex-suite-rev-math-only-list-line, .latex-suite-rev-stale-list-math-line) .cm-math.cm-formatting-list-ul,
+.cm-line:is(.latex-suite-rev-math-only-list-line, .latex-suite-rev-stale-list-math-line) .cm-math.cm-formatting-list-ol {
     padding-inline-start: 0;
 }
 
-.cm-line.latex-suite-rev-math-only-list-line .cm-math.cm-comment,
-.cm-line.latex-suite-rev-math-only-list-line .cm-math.cm-meta {
+.cm-line:is(.latex-suite-rev-math-only-list-line, .latex-suite-rev-stale-list-math-line) .cm-math.cm-comment,
+.cm-line:is(.latex-suite-rev-math-only-list-line, .latex-suite-rev-stale-list-math-line) .cm-math.cm-meta {
     color: var(--code-comment);
 }
 
-.cm-line.latex-suite-rev-math-only-list-line .cm-math.cm-tag {
+.cm-line:is(.latex-suite-rev-math-only-list-line, .latex-suite-rev-stale-list-math-line) .cm-math.cm-tag {
     color: var(--code-tag);
 }
 
-.cm-line.latex-suite-rev-math-only-list-line .cm-math.cm-punctuation,
-.cm-line.latex-suite-rev-math-only-list-line .cm-math.cm-bracket,
-.cm-line.latex-suite-rev-math-only-list-line .cm-math.cm-hr {
+.cm-line:is(.latex-suite-rev-math-only-list-line, .latex-suite-rev-stale-list-math-line) .cm-math.cm-punctuation,
+.cm-line:is(.latex-suite-rev-math-only-list-line, .latex-suite-rev-stale-list-math-line) .cm-math.cm-bracket,
+.cm-line:is(.latex-suite-rev-math-only-list-line, .latex-suite-rev-stale-list-math-line) .cm-math.cm-hr {
     color: var(--code-punctuation);
 }
 
-.cm-line.latex-suite-rev-math-only-list-line .cm-math.cm-number {
+.cm-line:is(.latex-suite-rev-math-only-list-line, .latex-suite-rev-stale-list-math-line) .cm-math.cm-number {
     color: var(--code-value);
 }
 
-.cm-line.latex-suite-rev-math-only-list-line .cm-math.cm-qualifier,
-.cm-line.latex-suite-rev-math-only-list-line .cm-math.cm-string,
-.cm-line.latex-suite-rev-math-only-list-line .cm-math.cm-string-2 {
+.cm-line:is(.latex-suite-rev-math-only-list-line, .latex-suite-rev-stale-list-math-line) .cm-math.cm-qualifier,
+.cm-line:is(.latex-suite-rev-math-only-list-line, .latex-suite-rev-stale-list-math-line) .cm-math.cm-string,
+.cm-line:is(.latex-suite-rev-math-only-list-line, .latex-suite-rev-stale-list-math-line) .cm-math.cm-string-2 {
     color: var(--code-string);
 }
 
-.cm-line.latex-suite-rev-math-only-list-line .cm-math.cm-operator {
+.cm-line:is(.latex-suite-rev-math-only-list-line, .latex-suite-rev-stale-list-math-line) .cm-math.cm-operator {
     color: var(--code-operator);
 }
 
-.cm-line.latex-suite-rev-math-only-list-line .cm-math.cm-link,
-.cm-line.latex-suite-rev-math-only-list-line .cm-math.cm-variable,
-.cm-line.latex-suite-rev-math-only-list-line .cm-math.cm-variable-2,
-.cm-line.latex-suite-rev-math-only-list-line .cm-math.cm-variable-3 {
+.cm-line:is(.latex-suite-rev-math-only-list-line, .latex-suite-rev-stale-list-math-line) .cm-math.cm-link,
+.cm-line:is(.latex-suite-rev-math-only-list-line, .latex-suite-rev-stale-list-math-line) .cm-math.cm-variable,
+.cm-line:is(.latex-suite-rev-math-only-list-line, .latex-suite-rev-stale-list-math-line) .cm-math.cm-variable-2,
+.cm-line:is(.latex-suite-rev-math-only-list-line, .latex-suite-rev-stale-list-math-line) .cm-math.cm-variable-3 {
     color: var(--code-property);
 }
 
-.cm-line.latex-suite-rev-math-only-list-line .cm-math.cm-builtin,
-.cm-line.latex-suite-rev-math-only-list-line .cm-math.cm-property,
-.cm-line.latex-suite-rev-math-only-list-line .cm-math.cm-attribute,
-.cm-line.latex-suite-rev-math-only-list-line .cm-math.cm-type {
+.cm-line:is(.latex-suite-rev-math-only-list-line, .latex-suite-rev-stale-list-math-line) .cm-math.cm-builtin,
+.cm-line:is(.latex-suite-rev-math-only-list-line, .latex-suite-rev-stale-list-math-line) .cm-math.cm-property,
+.cm-line:is(.latex-suite-rev-math-only-list-line, .latex-suite-rev-stale-list-math-line) .cm-math.cm-attribute,
+.cm-line:is(.latex-suite-rev-math-only-list-line, .latex-suite-rev-stale-list-math-line) .cm-math.cm-type {
     color: var(--code-function);
 }
 
-.cm-line.latex-suite-rev-math-only-list-line .cm-math.cm-keyword {
+.cm-line:is(.latex-suite-rev-math-only-list-line, .latex-suite-rev-stale-list-math-line) .cm-math.cm-keyword {
     color: var(--code-keyword);
 }
 
-.cm-line.latex-suite-rev-math-only-list-line .cm-math.cm-formatting-math {
+.cm-line:is(.latex-suite-rev-math-only-list-line, .latex-suite-rev-stale-list-math-line) .cm-math.cm-formatting-math {
     color: var(--text-accent);
 }
 
